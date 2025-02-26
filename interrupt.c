@@ -15,11 +15,11 @@ Register    idtR;
 char char_map[] =
 {
   '\0','\0','1','2','3','4','5','6',
-  '7','8','9','0','\'','¡','\0','\0',
+  '7','8','9','0','\'','ï¿½','\0','\0',
   'q','w','e','r','t','y','u','i',
   'o','p','`','+','\0','\0','a','s',
-  'd','f','g','h','j','k','l','ñ',
-  '\0','º','\0','ç','z','x','c','v',
+  'd','f','g','h','j','k','l','ï¿½',
+  '\0','ï¿½','\0','ï¿½','z','x','c','v',
   'b','n','m',',','.','-','\0','*',
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0','\0','\0','\0','\0','\0','7',
@@ -89,17 +89,46 @@ void setIdt()
 
 void keyboard_routine()
 {
-	char key = inb(0x60);
+	unsigned char key = inb(0x60);
 	int make = (key & 0x80) == 0;
 	key = key&0x7F;
 	
 	if (make) {
-		char c = char_map[key];
+		char c = char_map[(unsigned char)key];
 		if (c == '\0') c = 'L';
 		
-		prindyyyyyyyyyyyy
-		tc(c);
+		printc_xy(75, 20, c);
 	}
 }
 
+void page_fault2_routine(int err, int p)
+{
+	printk("Process generates a PAGE FAULT exception at EIP: ");
+	char* s = "0x00000";
+	int desp = 0;
+	while (p > 0) {
+		s[6-desp] = '0' + p%16;
+		p /= 16;
+		++desp;
+	}
+	printk(s);
+	while(1);
+}
 
+int zeos_ticks;
+
+void init_zeos_ticks()
+{
+	zeos_ticks = 0;
+}
+
+void clock_routine()
+{
+	zeos_show_clock();
+	++zeos_ticks;
+}
+
+int gettime_routine()
+{
+	return zeos_ticks;
+}

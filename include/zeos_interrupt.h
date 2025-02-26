@@ -23,5 +23,7 @@ void alignment_check_routine();
 
 void keyboard_routine();
 
+void clock_routine();
+
 void set_handlers();
 

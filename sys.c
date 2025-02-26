@@ -44,6 +44,25 @@ int sys_fork()
   return PID;
 }
 
+int sys_write()
+{
+	
+}
+
+int sys_gettime()
+{
+	int p = gettime_routine();
+	char* s = "0x00000";
+	int desp = 0;
+	while (p > 0) {
+		s[6-desp] = '0' + p%16;
+		p /= 16;
+		++desp;
+	}
+	printk(s);
+	return p;
+}
+
 void sys_exit()
 {  
 }

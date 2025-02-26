@@ -20,6 +20,9 @@ unsigned int *p_usr_size = (unsigned int *) KERNEL_START+1;
 unsigned int *p_rdtr = (unsigned int *) KERNEL_START+2;
 
 void keyboard_handler();
+void clock_handler();
+void page_fault2_handler();
+void system_call_handler();
 
 /************************/
 /** Auxiliar functions **/
@@ -82,8 +85,12 @@ int __attribute__((__section__(".text.main")))
   setIdt(); /* Definicio del vector de interrupcions */
   setTSS(); /* Definicio de la TSS */
   
+  setInterruptHandler(14, page_fault2_handler, 0);
   setInterruptHandler(33, keyboard_handler, 0);
-
+  setInterruptHandler(32, clock_handler, 0);
+  setTrapHandler(0x80, system_call_handler, 3);
+  init_zeos_ticks();
+  
   /* Initialize Memory */
   init_mm();
 
