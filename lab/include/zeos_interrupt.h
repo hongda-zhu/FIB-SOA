@@ -21,9 +21,5 @@ void intel_reserved_routine();
 void floating_point_error_routine();
 void alignment_check_routine();
 
-void keyboard_routine();
-
-void clock_routine();
-
 void set_handlers();
 

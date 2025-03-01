@@ -6,8 +6,13 @@
 #include <segment.h>
 #include <hardware.h>
 #include <io.h>
-
+#include <utils.h>
 #include <zeos_interrupt.h>
+
+void keyboard_handler();
+void clock_handler();
+void page_fault2_handler();
+void system_call_handler();
 
 Gate idt[IDT_ENTRIES];
 Register    idtR;
@@ -15,11 +20,11 @@ Register    idtR;
 char char_map[] =
 {
   '\0','\0','1','2','3','4','5','6',
-  '7','8','9','0','\'','�','\0','\0',
+  '7','8','9','0','\'','\xA1','\0','\0',
   'q','w','e','r','t','y','u','i',
   'o','p','`','+','\0','\0','a','s',
-  'd','f','g','h','j','k','l','�',
-  '\0','�','\0','�','z','x','c','v',
+  'd','f','g','h','j','k','l','\xF1',
+  '\0','\xE7','\0','\xBA','z','x','c','v',
   'b','n','m',',','.','-','\0','*',
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0','\0','\0','\0','\0','\0','7',
@@ -28,6 +33,7 @@ char char_map[] =
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0'
 };
+
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
 {
@@ -83,7 +89,10 @@ void setIdt()
   set_handlers();
 
   /* ADD INITIALIZATION CODE FOR INTERRUPT VECTOR */
-
+  setInterruptHandler(14, page_fault2_handler, 0);
+  setInterruptHandler(33, keyboard_handler, 0);
+  setInterruptHandler(32, clock_handler, 0);
+  setTrapHandler(0x80, system_call_handler, 3);
   set_idt_reg(&idtR);
 }
 

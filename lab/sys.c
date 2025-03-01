@@ -46,7 +46,7 @@ int sys_fork()
 
 int sys_write()
 {
-	
+	return 0;
 }
 
 int sys_gettime()
