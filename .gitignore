@@ -1,0 +1,4 @@
+   # Ignorar archivos objeto y binarios
+   *.o
+   *.bin
+   *.out
