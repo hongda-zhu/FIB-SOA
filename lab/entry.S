@@ -86,10 +86,7 @@ ENTRY(clock_handler)
 	iret
 
 ENTRY(page_fault2_handler)
-	SAVE_ALL
 	call page_fault2_routine
-	RESTORE_ALL
-	iret
 
 ENTRY(gettime_handler)
 	SAVE_ALL

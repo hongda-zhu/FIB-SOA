@@ -15,11 +15,11 @@ Register    idtR;
 char char_map[] =
 {
   '\0','\0','1','2','3','4','5','6',
-  '7','8','9','0','\'','°','\0','\0',
+  '7','8','9','0','\'','ÔøΩ','\0','\0',
   'q','w','e','r','t','y','u','i',
   'o','p','`','+','\0','\0','a','s',
-  'd','f','g','h','j','k','l','Ò',
-  '\0','∫','\0','Á','z','x','c','v',
+  'd','f','g','h','j','k','l','ÔøΩ',
+  '\0','ÔøΩ','\0','ÔøΩ','z','x','c','v',
   'b','n','m',',','.','-','\0','*',
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0','\0','\0','\0','\0','\0','7',
@@ -94,7 +94,7 @@ void keyboard_routine()
 	key = key&0x7F;
 	
 	if (make) {
-		char c = char_map[key];
+		char c = char_map[(unsigned char) key];
 		if (c == '\0') c = 'L';
 		
 		printc_xy(75, 20, c);
@@ -103,16 +103,23 @@ void keyboard_routine()
 
 void page_fault2_routine(int err, int p)
 {
-	printk("Process generates a PAGE FAULT exception at EIP: ");
-	char* s = "0x00000";
-	int desp = 0;
-	while (p > 0) {
-		s[6-desp] = '0' + p%16;
-		p /= 16;
-		++desp;
-	}
-	printk(s);
-	while(1);
+    unsigned int eip = p;  // Guarda el valor original de p
+    printk("Process generates a PAGE FAULT exception at EIP: 0x");
+    
+    // Buffer para almacenar la representaci√≥n hexadecimal (8 d√≠gitos + terminador nulo)
+    char hex_buffer[9];
+    hex_buffer[8] = '\0';  // Asegura que la cadena termine correctamente
+    
+    // Convierte el valor a hexadecimal, d√≠gito por d√≠gito
+    for (int i = 7; i >= 0; i--) {
+        int digit = eip & 0xF;  // Obtiene el √∫ltimo d√≠gito hexadecimal
+        hex_buffer[i] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+        eip >>= 4;  // Desplaza 4 bits a la derecha (un d√≠gito hexadecimal)
+    }
+    
+    printk(hex_buffer);
+    printk("\n");
+    while(1);
 }
 
 int zeos_ticks;
