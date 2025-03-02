@@ -13,6 +13,7 @@ void keyboard_handler();
 void clock_handler();
 void page_fault2_handler();
 void system_call_handler();
+void writeMSR(int msr, unsigned long value);
 
 Gate idt[IDT_ENTRIES];
 Register    idtR;
@@ -85,6 +86,11 @@ void setIdt()
   /* Program interrups/exception service routines */
   idtR.base  = (DWord)idt;
   idtR.limit = IDT_ENTRIES * sizeof(Gate) - 1;
+
+  writeMSR(0x174, __KERNEL_CS);
+  writeMSR(0x175, INITIAL_ESP);
+  writeMSR(0x176, (unsigned long)system_call_handler);
+
   
   set_handlers();
 

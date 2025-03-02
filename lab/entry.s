@@ -61,3 +61,5 @@ fin:
  movl %EAX, 0x18(%esp)
  popl %edx; popl %ecx; popl %ebx; popl %esi; popl %edi; popl %ebp; popl %eax; popl %ds; popl %es; popl %fs; popl %gs
  iret
+
+.globl writeMSR; .type writeMSR, @function; .align 0; writeMSR:
