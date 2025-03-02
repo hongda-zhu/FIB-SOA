@@ -110,3 +110,8 @@ fin:
 	iret
 
 ENTRY (writeMSR)
+      movl 4(%esp), %ecx    
+      movl 8(%esp), %eax    
+      movl $0, %edx         
+      wrmsr                 
+      ret
