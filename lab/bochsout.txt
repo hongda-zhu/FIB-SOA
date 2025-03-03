@@ -1,6 +1,6 @@
 00000000000i[      ] Bochs x86 Emulator 2.6.7
 00000000000i[      ]   Built from SVN snapshot on November 2, 2014
-00000000000i[      ] Compiled on Jun 28 2017 at 12:45:32
+00000000000i[      ] Compiled on Jun 28 2017 at 12:46:11
 00000000000i[      ] System configuration
 00000000000i[      ]   processors: 1 (cores=1, HT threads=1)
 00000000000i[      ]   A20 line support: yes
@@ -31,17 +31,17 @@
 00000000000i[      ]   SB16 support: no
 00000000000i[      ]   USB support: no
 00000000000i[      ]   VGA extension support: vbe
-00000000000i[MEM0  ] allocated memory at 0x7fd4e5ff6010. after alignment, vector=0x7fd4e5ff7000
+00000000000i[MEM0  ] allocated memory at 0x7f2bd5d82010. after alignment, vector=0x7f2bd5d83000
 00000000000i[MEM0  ] 16,00MB
 00000000000i[MEM0  ] mem block size = 0x00100000, blocks=16
-00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/opt/bochs/share/bochs/BIOS-bochs-latest')
+00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/opt/bochs_gdb/share/bochs/BIOS-bochs-latest')
 00000000000i[PLUGIN] init_dev of 'pci' plugin device by virtual method
 00000000000i[DEV   ] i440FX PMC present at device 0, function 0
 00000000000i[PLUGIN] init_dev of 'pci2isa' plugin device by virtual method
 00000000000i[DEV   ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] Using local time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Mon Mar  3 00:20:41 2025 (time0=1740957641)
+00000000000i[CMOS  ] Setting initial clock to: Mon Mar  3 23:19:06 2025 (time0=1741040346)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -53,7 +53,7 @@
 00000000000i[BXVGA ] VBE Bochs Display Extension Enabled
 00000000000i[XGUI  ] test_alloc_colors: 16 colors available out of 16 colors tried
 00000000000i[XGUI  ] font 8 wide x 16 high, display depth = 24
-00000000000i[MEM0  ] rom at 0xc0000/41472 ('/opt/bochs/share/bochs/VGABIOS-lgpl-latest')
+00000000000i[MEM0  ] rom at 0xc0000/41472 ('/opt/bochs_gdb/share/bochs/VGABIOS-lgpl-latest')
 00000000000i[PLUGIN] init_dev of 'floppy' plugin device by virtual method
 00000000000i[DMA   ] channel 2 used by Floppy Drive
 00000000000i[FLOPPY] fd0: './zeos.bin' ro=0, h=2,t=80,spt=18
@@ -80,7 +80,6 @@
 00000000000i[PAR   ] parallel port 1 at 0x0378 irq 7
 00000000000i[PLUGIN] init_dev of 'serial' plugin device by virtual method
 00000000000i[SER   ] com1 at 0x03f8 irq 4 (mode: null)
-00000000000i[PLUGIN] init_dev of 'iodebug' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'pci' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'pci2isa' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'cmos' plugin device by virtual method
@@ -95,7 +94,6 @@
 00000000000i[PLUGIN] register state of 'extfpuirq' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'parallel' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'serial' plugin device by virtual method
-00000000000i[PLUGIN] register state of 'iodebug' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'acpi' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'ioapic' plugin device by virtual method
 00000000000i[PLUGIN] register state of 'keyboard' plugin device by virtual method
@@ -129,9 +127,6 @@
 00000000000i[PLUGIN] reset of 'extfpuirq' plugin device by virtual method
 00000000000i[PLUGIN] reset of 'parallel' plugin device by virtual method
 00000000000i[PLUGIN] reset of 'serial' plugin device by virtual method
-00000000000i[PLUGIN] reset of 'iodebug' plugin device by virtual method
-00000000000i[XGUI  ] Mouse capture off
-00000000000i[      ] set SIGINT handler to bx_debug_ctrlc_handler
 00000000000i[XGUI  ] Mouse capture off
 00000004661i[BIOS  ] $Revision: 12412 $ $Date: 2014-07-10 09:28:59 +0200 (Do, 10. Jul 2014) $
 00000318049i[KBD   ] reset-disable command received
@@ -172,9 +167,8 @@
 00001529176i[BXVGA ] VBE known Display Interface b0c0
 00001529208i[BXVGA ] VBE known Display Interface b0c5
 00001532133i[VBIOS ] VBE Bios $Id: vbe.c,v 1.65 2014/07/08 18:02:25 vruppert Exp $
-00006082980i[XGUI  ] charmap update. Font Height is 16
 00014040191i[BIOS  ] Booting from 0000:7c00
-00033297278i[FLOPPY] partial read() on floppy image returns 370/512
+00033297278i[FLOPPY] partial read() on floppy image returns 322/512
 00033341722i[FLOPPY] read() on floppy image returns 0
 00033386166i[FLOPPY] read() on floppy image returns 0
 00033430610i[FLOPPY] read() on floppy image returns 0
@@ -254,8 +248,27 @@
 00036726464i[FLOPPY] read() on floppy image returns 0
 00036770908i[FLOPPY] read() on floppy image returns 0
 00036815352i[FLOPPY] read() on floppy image returns 0
-00037000360e[CPU0  ] iret: return CS selector null
-00870492000i[      ] Ctrl-C detected in signal handler.
-00870492000i[XGUI  ] Mouse capture off
-00870492000i[XGUI  ] Mouse capture off
-00870492000i[XGUI  ] Mouse capture off
+00043420916i[XGUI  ] charmap update. Font Height is 16
+00693652000i[      ] cpu loop quit, shutting down simulator
+00693652000i[CPU0  ] CPU is in protected mode (active)
+00693652000i[CPU0  ] CS.mode = 32 bit
+00693652000i[CPU0  ] SS.mode = 32 bit
+00693652000i[CPU0  ] EFER   = 0x00000000
+00693652000i[CPU0  ] | EAX=00113ffc  EBX=00001380  ECX=00000026  EDX=00007e6a
+00693652000i[CPU0  ] | ESP=00113fec  EBP=00113fec  ESI=000e0200  EDI=00003ff4
+00693652000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af PF cf
+00693652000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+00693652000i[CPU0  ] |  CS:0023( 0004| 0|  3) 00000000 ffffffff 1 1
+00693652000i[CPU0  ] |  DS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+00693652000i[CPU0  ] |  SS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+00693652000i[CPU0  ] |  ES:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+00693652000i[CPU0  ] |  FS:0000( 0000| 0|  0) 00000000 00000000 0 0
+00693652000i[CPU0  ] |  GS:0000( 0000| 0|  0) 00000000 00000000 0 0
+00693652000i[CPU0  ] | EIP=00114003 (00114003)
+00693652000i[CPU0  ] | CR0=0x80000011 CR2=0x00000000
+00693652000i[CPU0  ] | CR3=0x00028000 CR4=0x00000000
+00693652000i[CPU0  ] 0x00114003>> jmp .-2 (0x00114003) : EBFE
+00693652000i[CMOS  ] Last time is 1741040519 (Mon Mar  3 23:21:59 2025)
+00693652000i[XGUI  ] Exit
+00693652000i[      ] restoring default signal behavior
+00693652000i[SIM   ] quit_sim called with exit code 1

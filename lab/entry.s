@@ -64,24 +64,32 @@ fin:
       ret
 
 .globl syscall_handler_sysenter; .type syscall_handler_sysenter, @function; .align 0; syscall_handler_sysenter:
-    push $0x2B
-    push %ebp
+    pushl $0x2B
+    pushl %ebp
     pushfl
-    push $0x23
-    push 4(%ebp)
+    pushl $0x23
+    pushl 4(%ebp)
+
     pushl %gs; pushl %fs; pushl %es; pushl %ds; pushl %eax; pushl %ebp; pushl %edi; pushl %esi; pushl %ebx; pushl %ecx; pushl %edx; movl $0x18, %edx; movl %edx, %ds; movl %edx, %es
+
     cmpl $0, %eax
     jl sysenter_err
     cmpl $MAX_SYSCALL, %eax
     jg sysenter_err
+
     call *sys_call_table(, %eax, 0x04)
     jmp sysenter_fin
+
 sysenter_err:
     movl $-38, %eax
+
 sysenter_fin:
     movl %eax, 0x18(%esp)
+
     popl %edx; popl %ecx; popl %ebx; popl %esi; popl %edi; popl %ebp; popl %eax; popl %ds; popl %es; popl %fs; popl %gs
-    movl (%esp), %edx
-    movl 12(%esp), %ecx
+
+    movl 0x2C(%esp), %edx
+    movl 0x38(%esp), %ecx
     sti
+
     sysexit

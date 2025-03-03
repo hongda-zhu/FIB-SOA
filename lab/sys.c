@@ -44,36 +44,32 @@ int sys_fork()
   return PID;
 }
 
-int sys_write(int fd, char *buffer, int size)
-{
-    // Check if file descriptor is valid (only 1 for stdout is supported)
-    if (fd != 1) return -EBADF;
+int sys_write(int fd, char *buffer, int size) {
+
+    int fd_error = check_fd(fd, ESCRIPTURA);
+    if (fd_error) return fd_error;
     
-    // Check buffer pointer
     if (buffer == NULL) return -EFAULT;
     
-    // Check size parameter
     if (size < 0) return -EINVAL;
-    
-    // Check if buffer is in user memory space
+
     if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
     
-    // Local buffer to copy user data
     char local_buffer[256];
-    int bytes_left = size;
     int bytes_written = 0;
     
-    while (bytes_left > 0) {
-        // Copy data in chunks to avoid large stack allocations
-        int chunk = (bytes_left > 256) ? 256 : bytes_left;
+    while (bytes_written < size) {
+        int chunk = ((size - bytes_written) > 256) ? 256 : (size - bytes_written);
         
-        // Copy from user space to kernel space
         if (copy_from_user(buffer + bytes_written, local_buffer, chunk) < 0)
             return -EFAULT;
         
-        // Write to console (device-dependent part)
-        bytes_written += sys_write_console(local_buffer, chunk);
-        bytes_left -= chunk;
+        int ret = sys_write_console(local_buffer, chunk);
+        if (ret < 0) return ret;
+        
+        bytes_written += ret;
+        
+        if (ret < chunk) break;
     }
     
     return bytes_written;

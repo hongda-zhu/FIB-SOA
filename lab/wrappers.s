@@ -13,14 +13,15 @@
     pushl %ebp
     movl %esp, %ebp
 
-    movl 12(%ebp), %edx
-    movl 16(%ebp), %ecx
-    movl 20(%ebp), %ebx
-
-    movl $4, %eax
-
-    pushl %ecx
     pushl %edx
+    pushl %ecx
+
+    movl 8(%ebp), %ebx
+    movl 12(%ebp), %ecx
+    movl 16(%ebp), %edx
+
+
+    movl $2, %eax
 
     pushl $write_return
 
@@ -32,8 +33,9 @@
 write_return:
     popl %ebp
     addl $4, %esp
-    popl %edx
+
     popl %ecx
+    popl %edx
 
     cmpl $0, %eax
     jge write_exit
@@ -51,34 +53,26 @@ write_exit:
     pushl %ebp
     movl %esp, %ebp
 
-
     movl $10, %eax
-
 
     pushl %ecx
     pushl %edx
 
-
     pushl $gettime_return
-
 
     pushl %ebp
     movl %esp, %ebp
 
-
     sysenter
 
 gettime_return:
-
     popl %ebp
     addl $4, %esp
     popl %edx
     popl %ecx
 
-
     cmpl $0, %eax
     jge gettime_exit
-
 
     negl %eax
     movl %eax, errno

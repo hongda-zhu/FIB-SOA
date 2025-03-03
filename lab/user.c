@@ -24,7 +24,15 @@ main(void)
      * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
      *------------------------------------------------------------*/
     
-    int i =  write(1, "prueba", strlen("prueba"));
+    // test write
+    // char *message = "Hello, optimized write syscall!";
+    // int result = write(1, message, strlen(message));
+    
+    // if error
+    //if (result < 0) {
+     //   char *error_msg = "Error in write syscall\n";
+      //  write(1, error_msg, strlen(error_msg));
+    //}
 
     /*------------------------------------------------------------
      * Sección 1: Gestión de errores de página (Page Fault)

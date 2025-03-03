@@ -117,24 +117,32 @@ ENTRY (writeMSR)
       ret
 
 ENTRY(syscall_handler_sysenter)
-    push $__USER_DS
-    push %ebp                  /* 用户栈地址 */
-    pushfl
-    push $__USER_CS
-    push 4(%ebp)               /* 用户返回地址 */
+    pushl $__USER_DS
+    pushl %ebp            
+    pushfl                
+    pushl $__USER_CS
+    pushl 4(%ebp)         
+    
     SAVE_ALL
+    
     cmpl $0, %eax
     jl sysenter_err
     cmpl $MAX_SYSCALL, %eax
     jg sysenter_err
+    
     call *sys_call_table(, %eax, 0x04)
     jmp sysenter_fin
+    
 sysenter_err:
     movl $-ENOSYS, %eax
+    
 sysenter_fin:
     movl %eax, 0x18(%esp)
+    
     RESTORE_ALL
-    movl (%esp), %edx          /* 返回地址 */
-    movl 12(%esp), %ecx        /* 用户栈地址 */
-    sti                        /* 重新启用中断 */
+    
+    movl 0x2C(%esp), %edx    
+    movl 0x38(%esp), %ecx    
+    sti                      
+    
     sysexit
