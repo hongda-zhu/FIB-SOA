@@ -1,4 +1,4 @@
-# @see /usr/include/asm-generic/errno-base.h
+/* @see /usr/include/asm-generic/errno-base.h */
 
 #ifndef _ASM_GENERIC_ERRNO_BASE_H
 #define _ASM_GENERIC_ERRNO_BASE_H
@@ -40,7 +40,7 @@
 
 #endif
 
-# @see /usr/include/asm-generic/errno.h
+/* @see /usr/include/asm-generic/errno.h */
 
 #ifndef _ASM_GENERIC_ERRNO_H
 #define _ASM_GENERIC_ERRNO_H

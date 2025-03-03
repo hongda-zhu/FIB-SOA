@@ -146,8 +146,8 @@ void init_zeos_ticks()
 
 void clock_routine()
 {
-	zeos_show_clock();
-	++zeos_ticks;
+  zeos_show_clock();
+  ++zeos_ticks;
 }
 
 int gettime_routine()

@@ -13,13 +13,7 @@
 # 1 "include/segment.h" 1
 # 7 "entry.S" 2
 # 1 "include/errno.h" 1
-# @see /usr/include/asm-generic/errno-base.h
-# 43 "include/errno.h"
-# @see /usr/include/asm-generic/errno.h
-
-
-
-
+# 48 "include/errno.h"
 # 1 "/usr/include/asm-generic/errno-base.h" 1 3 4
 # 49 "include/errno.h" 2
 # 8 "entry.S" 2
@@ -63,3 +57,31 @@ fin:
  iret
 
 .globl writeMSR; .type writeMSR, @function; .align 0; writeMSR:
+      movl 4(%esp), %ecx
+      movl 8(%esp), %eax
+      movl $0, %edx
+      wrmsr
+      ret
+
+.globl syscall_handler_sysenter; .type syscall_handler_sysenter, @function; .align 0; syscall_handler_sysenter:
+    push $0x2B
+    push %ebp
+    pushfl
+    push $0x23
+    push 4(%ebp)
+    pushl %gs; pushl %fs; pushl %es; pushl %ds; pushl %eax; pushl %ebp; pushl %edi; pushl %esi; pushl %ebx; pushl %ecx; pushl %edx; movl $0x18, %edx; movl %edx, %ds; movl %edx, %es
+    cmpl $0, %eax
+    jl sysenter_err
+    cmpl $MAX_SYSCALL, %eax
+    jg sysenter_err
+    call *sys_call_table(, %eax, 0x04)
+    jmp sysenter_fin
+sysenter_err:
+    movl $-38, %eax
+sysenter_fin:
+    movl %eax, 0x18(%esp)
+    popl %edx; popl %ecx; popl %ebx; popl %esi; popl %edi; popl %ebp; popl %eax; popl %ds; popl %es; popl %fs; popl %gs
+    movl (%esp), %edx
+    movl 12(%esp), %ecx
+    sti
+    sysexit

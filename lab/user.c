@@ -17,21 +17,23 @@ main(void)
      * Sección 3: Llamada al sistema gettime
      * La función gettime() retorna el número de ticks transcurridos desde el arranque del sistema
      *------------------------------------------------------------*/
-    ticks = gettime();
+    // ticks = gettime();
 
     /*------------------------------------------------------------
      * Sección 2: Llamada al sistema write (sys_write)
      * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
      *------------------------------------------------------------*/
-     
+    
+    int i =  write(1, "prueba", strlen("prueba"));
 
     /*------------------------------------------------------------
      * Sección 1: Gestión de errores de página (Page Fault)
      * Se intenta acceder a una dirección inválida (0), lo que desencadena una excepción de fallo de página.
      * El manejador de excepción imprimirá la dirección EIP inadecuada y se detendrá el sistema.
      *------------------------------------------------------------*/
-    char *p = 0;
-    *p = 'x';  /* Esto provoca una exception Page Fault */
+    
+    // char *p = 0;
+    // *p = 'x'; 
 
     while(1){
         ;  /* Se permanece en bucle infinito tras la excepción */

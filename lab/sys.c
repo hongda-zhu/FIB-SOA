@@ -2,7 +2,7 @@
  * sys.c - Syscalls implementation
  */
 #include <devices.h>
-
+#include <errno.h>
 #include <utils.h>
 
 #include <io.h>
@@ -18,11 +18,11 @@
 #define LECTURA 0
 #define ESCRIPTURA 1
 
-int check_fd(int fd, int permissions)
+int check_fd(int fd, int operation)
 {
-  if (fd!=1) return -9; /*EBADF*/
-  if (permissions!=ESCRIPTURA) return -13; /*EACCES*/
-  return 0;
+    if (fd != 1) return -EBADF;  
+    if (operation != ESCRIPTURA) return -EACCES; 
+    return 0;
 }
 
 int sys_ni_syscall()
@@ -44,9 +44,39 @@ int sys_fork()
   return PID;
 }
 
-int sys_write()
+int sys_write(int fd, char *buffer, int size)
 {
-	return 0;
+    // Check if file descriptor is valid (only 1 for stdout is supported)
+    if (fd != 1) return -EBADF;
+    
+    // Check buffer pointer
+    if (buffer == NULL) return -EFAULT;
+    
+    // Check size parameter
+    if (size < 0) return -EINVAL;
+    
+    // Check if buffer is in user memory space
+    if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
+    
+    // Local buffer to copy user data
+    char local_buffer[256];
+    int bytes_left = size;
+    int bytes_written = 0;
+    
+    while (bytes_left > 0) {
+        // Copy data in chunks to avoid large stack allocations
+        int chunk = (bytes_left > 256) ? 256 : bytes_left;
+        
+        // Copy from user space to kernel space
+        if (copy_from_user(buffer + bytes_written, local_buffer, chunk) < 0)
+            return -EFAULT;
+        
+        // Write to console (device-dependent part)
+        bytes_written += sys_write_console(local_buffer, chunk);
+        bytes_left -= chunk;
+    }
+    
+    return bytes_written;
 }
 
 int sys_gettime()
