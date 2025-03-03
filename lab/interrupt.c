@@ -13,6 +13,7 @@ void keyboard_handler();
 void clock_handler();
 void page_fault2_handler();
 void system_call_handler();
+void syscall_handler_sysenter();
 void writeMSR(int msr, unsigned long value);
 
 Gate idt[IDT_ENTRIES];
@@ -89,7 +90,7 @@ void setIdt()
 
   writeMSR(0x174, __KERNEL_CS);
   writeMSR(0x175, INITIAL_ESP);
-  writeMSR(0x176, (unsigned long)system_call_handler);
+  writeMSR(0x176, (unsigned long)syscall_handler_sysenter);
 
   
   set_handlers();

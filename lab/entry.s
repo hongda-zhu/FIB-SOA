@@ -88,8 +88,7 @@ sysenter_fin:
 
     popl %edx; popl %ecx; popl %ebx; popl %esi; popl %edi; popl %ebp; popl %eax; popl %ds; popl %es; popl %fs; popl %gs
 
-    movl 0x2C(%esp), %edx
-    movl 0x38(%esp), %ecx
+    movl (%esp), %edx
+    movl 12(%esp), %ecx
     sti
-
     sysexit

@@ -21,7 +21,7 @@
     movl 16(%ebp), %edx
 
 
-    movl $2, %eax
+    movl $4, %eax
 
     pushl $write_return
 

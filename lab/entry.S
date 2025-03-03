@@ -118,10 +118,10 @@ ENTRY (writeMSR)
 
 ENTRY(syscall_handler_sysenter)
     pushl $__USER_DS
-    pushl %ebp            
+    pushl %ebp                // User stack address  
     pushfl                
     pushl $__USER_CS
-    pushl 4(%ebp)         
+    pushl 4(%ebp)             // User return address
     
     SAVE_ALL
     
@@ -141,8 +141,7 @@ sysenter_fin:
     
     RESTORE_ALL
     
-    movl 0x2C(%esp), %edx    
-    movl 0x38(%esp), %ecx    
-    sti                      
-    
+    movl (%esp), %edx   // Return address
+    movl 12(%esp), %ecx // User stack address
+    sti                 // Enable interrupts again
     sysexit
