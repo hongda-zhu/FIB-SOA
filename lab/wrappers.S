@@ -5,14 +5,13 @@ ENTRY(write)
     pushl %ebp
     movl %esp, %ebp
     
-    pushl %edx
     pushl %ecx
+    pushl %edx
     
-    movl 8(%ebp), %ebx    /* fd */   
+    movl 8(%ebp), %edx    /* fd */   
     movl 12(%ebp), %ecx   /* buffer */
-    movl 16(%ebp), %edx   /* size */
+    movl 16(%ebp), %ebx   /* size */
     
-
     movl $4, %eax        
     
     pushl $write_return
@@ -20,14 +19,15 @@ ENTRY(write)
     pushl %ebp
     movl %esp, %ebp
     
+    
     sysenter
 
 write_return:
     popl %ebp
     addl $4, %esp
     
-    popl %ecx
     popl %edx
+    popl %ecx
     
     cmpl $0, %eax
     jge write_exit

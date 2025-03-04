@@ -17,6 +17,7 @@
 
 #define LECTURA 0
 #define ESCRIPTURA 1
+#define BUFFER_SIZE 256
 
 int check_fd(int fd, int operation)
 {
@@ -45,31 +46,60 @@ int sys_fork()
 }
 
 int sys_write(int fd, char *buffer, int size) {
-
-    int fd_error = check_fd(fd, ESCRIPTURA);
-    if (fd_error) return fd_error;
-    
-    if (buffer == NULL) return -EFAULT;
-    
-    if (size < 0) return -EINVAL;
-
-    if (!access_ok(VERIFY_READ, buffer, size)) return -EFAULT;
-    
-    char local_buffer[256];
+    char localbuffer[BUFFER_SIZE];
+    int bytes_left;
     int bytes_written = 0;
+    int ret;
+
+    if ((ret = check_fd(fd, ESCRIPTURA)))
+        return ret;
     
-    while (bytes_written < size) {
-        int chunk = ((size - bytes_written) > 256) ? 256 : (size - bytes_written);
-        
-        if (copy_from_user(buffer + bytes_written, local_buffer, chunk) < 0)
+    if (buffer == NULL)
+        return -EFAULT;
+    
+    if (size < 0)
+        return -EINVAL;
+    
+    if (!access_ok(VERIFY_READ, buffer, size))
+        return -EFAULT;
+    
+    bytes_left = size;
+    
+    if (bytes_left <= BUFFER_SIZE - 1) {
+        if (copy_from_user(buffer, localbuffer, bytes_left) != 0)
             return -EFAULT;
         
-        int ret = sys_write_console(local_buffer, chunk);
-        if (ret < 0) return ret;
+        localbuffer[bytes_left] = '\n';
         
-        bytes_written += ret;
+        ret = sys_write_console(localbuffer, bytes_left + 1);
+        if (ret < 0)
+            return ret;
         
-        if (ret < chunk) break;
+        return (ret > 0) ? size : ret - 1;
+    }
+    
+    while (bytes_left > 0) {
+        int chunk_size = (bytes_left > BUFFER_SIZE - 1) ? BUFFER_SIZE - 1 : bytes_left;
+        int is_last_chunk = (bytes_left <= BUFFER_SIZE - 1);
+        
+        if (copy_from_user(buffer + bytes_written, localbuffer, chunk_size) != 0)
+            return -EFAULT;
+        
+        if (is_last_chunk) {
+            localbuffer[chunk_size] = '\n';
+            chunk_size++;
+        }
+        
+        ret = sys_write_console(localbuffer, chunk_size);
+        if (ret < 0)
+            return ret;
+        
+        int actual_written = is_last_chunk ? ret - 1 : ret;
+        bytes_left -= actual_written;
+        bytes_written += actual_written;
+        
+        if (actual_written < chunk_size - (is_last_chunk ? 1 : 0))
+            break;
     }
     
     return bytes_written;
@@ -92,4 +122,3 @@ int sys_gettime()
 void sys_exit()
 {  
 }
-

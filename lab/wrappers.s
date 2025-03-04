@@ -13,13 +13,12 @@
     pushl %ebp
     movl %esp, %ebp
 
-    pushl %edx
     pushl %ecx
+    pushl %edx
 
-    movl 8(%ebp), %ebx
+    movl 8(%ebp), %edx
     movl 12(%ebp), %ecx
-    movl 16(%ebp), %edx
-
+    movl 16(%ebp), %ebx
 
     movl $4, %eax
 
@@ -28,14 +27,15 @@
     pushl %ebp
     movl %esp, %ebp
 
+
     sysenter
 
 write_return:
     popl %ebp
     addl $4, %esp
 
-    popl %ecx
     popl %edx
+    popl %ecx
 
     cmpl $0, %eax
     jge write_exit

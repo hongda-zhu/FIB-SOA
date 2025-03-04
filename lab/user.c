@@ -26,12 +26,17 @@ main(void)
     
     // test write
     char *message = "Hello, optimized write syscall!";
+    char *blanc ;
     int result = write(1, message, strlen(message));
+    result = write(0, message, strlen(message));  // error case while fd = 0
+    // result = write(1, blanc, strlen(blanc));  // EFAULT
+
     
     // if error
     if (result < 0) {
         char *error_msg = "Error in write syscall\n";
         write(1, error_msg, strlen(error_msg));
+        perror();
     }
 
     /*------------------------------------------------------------
