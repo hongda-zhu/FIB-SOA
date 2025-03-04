@@ -88,11 +88,6 @@ ENTRY(clock_handler)
 ENTRY(page_fault2_handler)
 	call page_fault2_routine
 
-ENTRY(gettime_handler)
-	SAVE_ALL
-	call gettime_routine
-	RESTORE_ALL
-	iret
 
 ENTRY(system_call_handler)
 	SAVE_ALL 							// Save the current context

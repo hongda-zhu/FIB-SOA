@@ -5,6 +5,10 @@ ENTRY(write)
     pushl %ebp
     movl %esp, %ebp
     
+    pushl %edi
+    pushl %esi
+    pushl %ebx
+
     pushl %ecx
     pushl %edx
     
@@ -28,6 +32,10 @@ write_return:
     
     popl %edx
     popl %ecx
+
+    popl %ebx
+    popl %esi
+    popl %edi
     
     cmpl $0, %eax
     jge write_exit
@@ -50,6 +58,10 @@ ENTRY(gettime)
     pushl %ecx
     pushl %edx
 
+    pushl %edi
+    pushl %esi
+    pushl %ebx
+
     pushl $gettime_return
 
     pushl %ebp
@@ -60,8 +72,13 @@ ENTRY(gettime)
 gettime_return:
     popl %ebp
     addl $4, %esp
+
     popl %edx
     popl %ecx
+    
+    popl %ebx
+    popl %esi
+    popl %edi
 
     cmpl $0, %eax
     jge gettime_exit
