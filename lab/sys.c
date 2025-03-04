@@ -107,16 +107,8 @@ int sys_write(int fd, char *buffer, int size) {
 
 int sys_gettime()
 {
-	int p = gettime_routine();
-	char* s = "0x00000";
-	int desp = 0;
-	while (p > 0) {
-		s[6-desp] = '0' + p%16;
-		p /= 16;
-		++desp;
-	}
-	printk(s);
-	return p;
+    volatile int ticks = gettime_routine();  
+    return ticks;
 }
 
 void sys_exit()

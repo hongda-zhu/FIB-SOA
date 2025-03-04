@@ -17,7 +17,13 @@ main(void)
      * Sección 3: Llamada al sistema gettime
      * La función gettime() retorna el número de ticks transcurridos desde el arranque del sistema
      *------------------------------------------------------------*/
-     // int x = gettime();
+    write(1, "\n", 1); 
+    int x = gettime();
+
+    char time_str[12];
+    itoa(x, time_str); 
+    int len = strlen(time_str);
+    write(1, time_str, len);
 
     /*------------------------------------------------------------
      * Sección 2: Llamada al sistema write (sys_write)
@@ -28,7 +34,7 @@ main(void)
     char *message = "Hello, optimized write syscall!";
     char *blanc ;
     int result = write(1, message, strlen(message));
-    result = write(0, message, strlen(message));  // error case while fd = 0
+    // result = write(0, message, strlen(message));  // error case while fd = 0
     // result = write(1, blanc, strlen(blanc));  // EFAULT
 
     
