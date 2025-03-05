@@ -105,10 +105,16 @@ fin:
 	iret
 
 ENTRY (writeMSR)
+      pushl %ebp
+      movl %esp, %ebp
+      
       movl 4(%esp), %ecx    
       movl 8(%esp), %eax    
       movl $0, %edx         
-      wrmsr                 
+      wrmsr       
+
+      movl %ebp, %ebp
+      popl %ebp
       ret
 
 ENTRY(syscall_handler_sysenter)
