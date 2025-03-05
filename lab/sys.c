@@ -19,6 +19,8 @@
 #define ESCRIPTURA 1
 #define BUFFER_SIZE 256
 
+char localbuffer[BUFFER_SIZE];
+
 int check_fd(int fd, int operation)
 {
     if (fd != 1) return -EBADF;  
@@ -46,7 +48,6 @@ int sys_fork()
 }
 
 int sys_write(int fd, char *buffer, int size) {
-    char localbuffer[BUFFER_SIZE];
     int bytes_left;
     int bytes_written = 0;
     int ret;
@@ -105,10 +106,11 @@ int sys_write(int fd, char *buffer, int size) {
     return bytes_written;
 }
 
+extern int zeos_ticks;
+
 int sys_gettime()
 {
-    volatile int ticks = gettime_routine();  
-    return ticks;
+    return zeos_ticks;
 }
 
 void sys_exit()

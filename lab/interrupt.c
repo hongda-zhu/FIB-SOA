@@ -138,7 +138,7 @@ void page_fault2_routine(int err, int p)
     while(1);
 }
 
-int zeos_ticks;
+int zeos_ticks = 0;
 
 void init_zeos_ticks()
 {
@@ -149,9 +149,4 @@ void clock_routine()
 {
   zeos_show_clock();
   ++zeos_ticks;
-}
-
-int gettime_routine()
-{
-	return zeos_ticks;
 }
