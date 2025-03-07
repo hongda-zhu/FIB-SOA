@@ -7,11 +7,11 @@ int add(int a, int b) {
 
 int addASM(int par1,int par2);
 int gettime();
+void perror();
 
 int __attribute__ ((__section__(".text.main")))
 main(void)
 {
-    int ticks;
 
     /*------------------------------------------------------------
      * Sección 3: Llamada al sistema gettime

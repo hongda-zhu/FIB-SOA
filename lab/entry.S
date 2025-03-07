@@ -108,8 +108,8 @@ ENTRY (writeMSR)
       pushl %ebp
       movl %esp, %ebp
       
-      movl 4(%ebp), %ecx    
-      movl 8(%ebp), %eax    
+      movl 8(%ebp), %ecx    
+      movl 12(%ebp), %eax    
       movl $0, %edx         
       wrmsr       
 

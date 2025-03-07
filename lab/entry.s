@@ -52,10 +52,16 @@ fin:
  iret
 
 .globl writeMSR; .type writeMSR, @function; .align 0; writeMSR:
-      movl 4(%esp), %ecx
-      movl 8(%esp), %eax
+      pushl %ebp
+      movl %esp, %ebp
+
+      movl 8(%ebp), %ecx
+      movl 12(%ebp), %eax
       movl $0, %edx
       wrmsr
+
+      movl %ebp, %ebp
+      popl %ebp
       ret
 
 .globl syscall_handler_sysenter; .type syscall_handler_sysenter, @function; .align 0; syscall_handler_sysenter:

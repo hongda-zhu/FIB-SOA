@@ -111,7 +111,7 @@ void keyboard_routine()
 	
 	if (make) {
 		char c = char_map[(unsigned char) key];
-		if (c == '\0') c = 'L';
+		if (c == '\0') c = 'C';
 		
 		printc_xy(75, 20, c);
 	}
