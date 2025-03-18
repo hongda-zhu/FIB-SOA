@@ -17,6 +17,8 @@ enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
 struct task_struct {
   int PID;			/* Process ID. This MUST be the first field of the struct. */
   page_table_entry * dir_pages_baseAddr;
+  struct list_head list;
+  long* k_esp;
 };
 
 union task_union {
@@ -25,6 +27,7 @@ union task_union {
 };
 
 extern union task_union task[NR_TASKS]; /* Vector de tasques */
+
 
 
 #define KERNEL_ESP(t)       	(DWord) &(t)->stack[KERNEL_STACK_SIZE]

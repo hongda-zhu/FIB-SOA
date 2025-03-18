@@ -3,4 +3,6 @@
    *.bin
    *.out
    *.s
+   /lab/.vscode
+
 

@@ -146,3 +146,28 @@ sysenter_fin:
     movl 12(%esp), %ecx // User stack address
     sti                 // Enable interrupts again
     sysexit
+
+ENTRY(task_switch)
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %esi
+	pushl %edi
+	pushl %ebx
+	pushl 8(%ebp)
+	call inner_task_switch
+	addl $4, %ebp
+	popl %ebx
+	popl %edi
+	popl %esi
+	popl %ebp
+	ret
+
+//task_switch43(&(current->k_esp), t->k_esp)
+ENTRY(task_switch43)
+	pushl %ebp
+	movl %esp, %ebp
+	movl 4(%ebp), %eax
+	movl %ebp, (%eax)
+	movl 8(%ebp), %esp
+	popl %ebp
+	ret
