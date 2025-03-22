@@ -69,6 +69,7 @@ void init_idle (void)
 	idle_task->k_esp = &(idle_task_union->stack[KERNEL_STACK_SIZE-2]);
 }
 
+extern void writeMSR(int msr, unsigned long value);
 void init_task1(void)
 {
 	struct list_head * task1_list_head = list_first( &freequeue );
@@ -109,6 +110,7 @@ struct task_struct* current()
   return (struct task_struct*)(ret_value&0xfffff000);
 }
 
+extern void task_switch43(void*, long*);
 void inner_task_switch(union task_union*t) {
 	//t = (union task_union*)idle_task;
 	//long mobe = 1;

@@ -245,7 +245,7 @@ void free_frame( unsigned int frame )
 /* set_ss_pag - Associates logical page 'page' with physical page 'frame' */
 void set_ss_pag(page_table_entry *PT, unsigned page,unsigned frame)
 {
-	PT[page].entry=0;
+	PT[page].entry=0; //?
 	PT[page].bits.pbase_addr=frame;
 	PT[page].bits.user=1;
 	PT[page].bits.rw=1;

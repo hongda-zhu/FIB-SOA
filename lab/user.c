@@ -49,9 +49,17 @@ main(void)
      * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
      *------------------------------------------------------------*/
 
+	int pid;
+    pid = fork();
+
 	// test getpid
 	itoa(getpid(), message);
     result = write(1, message, strlen(message));
+    
+    itoa(pid, message);
+    result = write(1, "forkRes:", 8);
+    result = write(1, message, strlen(message));
+    
 
     /*------------------------------------------------------------
      * Sección 1: Gestión de errores de página (Page Fault)
@@ -61,6 +69,8 @@ main(void)
     
     // char *p = 0;
     // *p = 'x'; 
+
+    
 
     while(1){
 		//write(1, "init", 4);

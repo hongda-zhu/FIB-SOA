@@ -148,6 +148,10 @@ sysenter_fin:
     sti                 // Enable interrupts again
     sysexit
 
+//xd
+ENTRY(get_ebp)
+	movl %ebp, %eax
+
 ENTRY(task_switch)
 	pushl %ebp
 	movl %esp, %ebp
