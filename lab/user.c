@@ -36,7 +36,6 @@ main(void)
     int result = write(1, message, strlen(message));
     // result = write(0, message, strlen(message));  // error case while fd = 0
     // result = write(1, blanc, strlen(blanc));  // EFAULT
-
     
     // if error
     if (result < 0) {
@@ -44,6 +43,15 @@ main(void)
         write(1, error_msg, strlen(error_msg));
         perror();
     }
+    
+    /*------------------------------------------------------------
+     * Sección 4: Llamada al sistema write (sys_write)
+     * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
+     *------------------------------------------------------------*/
+
+	// test getpid
+	itoa(getpid(), message);
+    result = write(1, message, strlen(message));
 
     /*------------------------------------------------------------
      * Sección 1: Gestión de errores de página (Page Fault)
@@ -55,6 +63,7 @@ main(void)
     // *p = 'x'; 
 
     while(1){
+		//write(1, "init", 4);
         ;  /* Se permanece en bucle infinito tras la excepción */
     }
 

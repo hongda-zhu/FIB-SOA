@@ -145,8 +145,18 @@ void init_zeos_ticks()
 	zeos_ticks = 0;
 }
 
+extern struct task_struct *idle_task;
+extern struct task_struct *task1;
 void clock_routine()
 {
-  zeos_show_clock();
-  ++zeos_ticks;
+    zeos_show_clock();
+    ++zeos_ticks;
+    /*
+    if ((zeos_ticks%10)==0)
+    {
+		if (current()->PID == idle_task->PID)
+		task_switch(task1);
+		else
+		task_switch(idle_task);
+	}*/
 }

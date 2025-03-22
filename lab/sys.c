@@ -28,11 +28,6 @@ int check_fd(int fd, int operation)
     return 0;
 }
 
-int sys_ni_syscall()
-{
-	return -38; /*ENOSYS*/
-}
-
 int sys_getpid()
 {
 	return current()->PID;
@@ -40,11 +35,58 @@ int sys_getpid()
 
 int sys_fork()
 {
-  int PID=-1;
-
   // creates the child process
+  struct list_head * child_list_head = list_first( &freequeue );
+  if (child_list_head == 0) return -1;
   
-  return PID;
+  list_del( e ); 
+  
+  struct task_struct * child_task = list_head_to_task_struct(child_list_head);
+  union task_union * child_union = (union task_union *) child_task;
+  
+  copy_data(current(), child_union, KERNEL_STACK_SIZE);
+  
+  set_user_pages(child_task);
+  allocate_DIR(child_task);
+  
+  int frame = alloc_frame();
+  if (frame == -1) {
+	  free_user_pages(child_task);
+	  list_add( child_list_head, &freequeue );
+	  return -1;
+  }
+  
+  page_table_entry * childPT = get_PT(child_task);
+  page_table_entry * parentPT = get_PT(current());
+  
+  /*
+   * mirar be mm.c (funcions de alloc_frame, fisica a logica i viceversa, etc)
+   * a mm_address.h hi ha com esta distribuida la taula de pagines (per saber quines estan buides per fer servir per copiar de parent a child)
+   * 
+   * 
+   * */
+
+  /* CODE */
+  for (pag=0;pag<NUM_PAG_CODE;pag++){
+	childPT[PAG_LOG_INIT_CODE+pag].entry = 0;
+  	childPT[PAG_LOG_INIT_CODE+pag].bits.pbase_addr = parentPT[PAG_LOG_INIT_CODE+pag].bits.pbase_addr;
+  	childPT[PAG_LOG_INIT_CODE+pag].bits.user = 1;
+  	childPT[PAG_LOG_INIT_CODE+pag].bits.present = 1;
+  }
+  
+  /* DATA */ 
+  for (pag=0;pag<NUM_PAG_DATA;pag++){
+  	childPT[PAG_LOG_INIT_DATA+pag].entry = 0;
+  	childPT[PAG_LOG_INIT_DATA+pag].bits.pbase_addr = new_ph_pag;
+  	childPT[PAG_LOG_INIT_DATA+pag].bits.user = 1;
+  	childPT[PAG_LOG_INIT_DATA+pag].bits.rw = 1;
+  	childPT[PAG_LOG_INIT_DATA+pag].bits.present = 1;
+  }
+  
+  
+  //...
+  child_task->PID = 0;
+  return child_task->PID;
 }
 
 int sys_write(int fd, char *buffer, int size) {

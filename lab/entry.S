@@ -74,7 +74,8 @@
 ENTRY(keyboard_handler)
 	SAVE_ALL
 	call keyboard_routine
-      EOI
+    EOI
+    //call task_switch
 	RESTORE_ALL
 	iret
 
@@ -155,7 +156,7 @@ ENTRY(task_switch)
 	pushl %ebx
 	pushl 8(%ebp)
 	call inner_task_switch
-	addl $4, %ebp
+	addl $4, %esp
 	popl %ebx
 	popl %edi
 	popl %esi
@@ -166,8 +167,8 @@ ENTRY(task_switch)
 ENTRY(task_switch43)
 	pushl %ebp
 	movl %esp, %ebp
-	movl 4(%ebp), %eax
+	movl 8(%ebp), %eax
 	movl %ebp, (%eax)
-	movl 8(%ebp), %esp
+	movl 12(%ebp), %esp
 	popl %ebp
 	ret
