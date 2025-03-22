@@ -44,13 +44,12 @@ int sys_getpid()
 int ret_from_fork() {
 	return 0;
 }
-
+void mobe(){printc('a');}
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
 extern long* get_ebp();
 int sys_fork()
 {
-	printk("ola");
   struct list_head * child_list_head;
   page_table_entry * childPT;
   page_table_entry * parentPT;
@@ -73,7 +72,7 @@ int sys_fork()
   
   childPT = get_PT(child_task);
   parentPT = get_PT(current());
-  
+ 
   //check if all frames were given
   for (pag=0;pag<NUM_PAG_CODE;pag++){
 	if (childPT[PAG_LOG_INIT_CODE+pag].bits.pbase_addr == -1) {
@@ -98,34 +97,40 @@ int sys_fork()
 	  list_add( child_list_head, &freequeue );
 	  return -1;
   }
+  
+  /* KERNEL */
+  for (pag=0;pag<NUM_PAG_KERNEL;pag++){
+	set_ss_pag(childPT, pag, get_frame(parentPT, 0+pag));
+  }
 
   /* CODE */
   for (pag=0;pag<NUM_PAG_CODE;pag++){
-  	childPT[PAG_LOG_INIT_CODE+pag].bits.pbase_addr = parentPT[PAG_LOG_INIT_CODE+pag].bits.pbase_addr;
+  	set_ss_pag(childPT, PAG_LOG_INIT_CODE+pag, get_frame(parentPT, PAG_LOG_INIT_CODE+pag));
   }
-  
+
   /* DATA */ 
-  for (pag=0;pag<NUM_PAG_DATA;pag++){ //0x0102
-	childFrame = get_frame(childPT, PAG_LOG_INIT_DATA+pag); //fisica que correspon a l'adreça logica DEL CHILD 0x0102
-	set_ss_pag(parentPT, 0x0F, childFrame); //assignem l'adreca logica 0x0F del PARENT a la fisica que hem trobat
-	copy_data(PAG_LOG_INIT_DATA+pag, 0x0F, PAGE_SIZE); //copiem logica a logica, que correspon a copiar logica del parent a mateixa logica del child
+  for (pag=0;pag<NUM_PAG_DATA;pag++){
+	childFrame = get_frame(childPT, PAG_LOG_INIT_DATA+pag); //fisica que correspon a la pagina logica DEL CHILD
+	set_ss_pag(parentPT, 0x0F, childFrame); //assignem la pagina logica 0x0F del PARENT a la fisica que hem trobat
+
+	copy_data((PAG_LOG_INIT_DATA+pag)*PAGE_SIZE, 0x0F*PAGE_SIZE, PAGE_SIZE); //copiem logica a logica, que correspon a copiar logica del parent a mateixa logica del child
+	del_ss_pag(parentPT, 0x0F);
   }
-  del_ss_pag(parentPT, 0x0F);
-  
-  //flush TLB
-  set_cr3(get_DIR(current()));
   
   child_task->PID = PID_cnt++;
-  
+  mobe();
   child_task->k_esp = get_ebp();
   child_task->k_esp--;
-  
-  *(child_task->k_esp + (child_task - current())) = 0;
-  *(child_task->k_esp + (child_task - current()) + 1) = ret_from_fork; //potser falta multiplicar per 4
+   
+  child_union->stack[(long)(child_task->k_esp) % 0x1000] = 0;
+  child_union->stack[((long)(child_task->k_esp) % 0x1000) + 1] = ret_from_fork;
   
   child_task->current_state = ST_READY;
   list_add_tail(&(child_task->list), &readyqueue);
-    
+  printc('0' + child_task->PID);
+  
+  //flush TLB
+  set_cr3(get_DIR(current())); //WTFFF
   return child_task->PID;
 }
 

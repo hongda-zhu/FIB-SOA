@@ -51,6 +51,7 @@ main(void)
 
 	int pid;
     pid = fork();
+    write(1, "mobe", 4);
 
 	// test getpid
 	itoa(getpid(), message);

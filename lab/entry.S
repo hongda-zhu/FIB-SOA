@@ -151,6 +151,7 @@ sysenter_fin:
 //xd
 ENTRY(get_ebp)
 	movl %ebp, %eax
+	ret
 
 ENTRY(task_switch)
 	pushl %ebp
