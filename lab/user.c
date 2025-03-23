@@ -12,17 +12,65 @@ void perror();
 int __attribute__ ((__section__(".text.main")))
 main(void)
 {
+    int pid, result, x, len;
+    char buffer[128], time_str[12], *message, *error_msg, *blanc;
+    /*------------------------------------------------------------
+     * Sección 5: Llamada al sistema fork (sys_fork)
+     *------------------------------------------------------------*/
+
+    
+    // Realizar el fork
+    pid = fork();
+    
+    if (pid < 0) {
+        // Error en fork
+        write(1, "Error en fork\n", 14);
+    }
+    else if (pid == 0) {
+        // Código del hijo
+        write(1, "Soy el proceso hijo\n", 20);
+        itoa(getpid(), buffer);
+        write(1, "Mi PID es: ", 11);
+        write(1, buffer, strlen(buffer));
+        write(1, "\n", 1);
+    }
+    else {
+        // Código del padre
+        write(1, "Soy el proceso padre\n", 21);
+        itoa(getpid(), buffer);
+        write(1, "Mi PID es: ", 11);
+        write(1, buffer, strlen(buffer));
+        write(1, "\n", 1);
+        write(1, "PID de mi hijo: ", 16);
+        itoa(pid, buffer);
+        write(1, buffer, strlen(buffer));
+        write(1, "\n", 1);
+    }
+
+    /*------------------------------------------------------------
+     * Sección 4: Llamada al sistema write (sys_write)
+     * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
+     *------------------------------------------------------------*/
+
+	// test getpid
+	itoa(getpid(), message);
+    result = write(1, message, strlen(message));
+    
+    itoa(pid, message);
+    result = write(1, "forkRes:", 8);
+    result = write(1, message, strlen(message));
+    
 
     /*------------------------------------------------------------
      * Sección 3: Llamada al sistema gettime
      * La función gettime() retorna el número de ticks transcurridos desde el arranque del sistema
      *------------------------------------------------------------*/
     write(1, "\n", 1); 
-    int x = gettime();
+    x= gettime();
 
-    char time_str[12];
+    time_str[12];
     itoa(x, time_str); 
-    int len = strlen(time_str);
+    len = strlen(time_str);
     write(1, time_str, len);
 
     /*------------------------------------------------------------
@@ -31,9 +79,9 @@ main(void)
      *------------------------------------------------------------*/
     
     // test write
-    char *message = "Hello, optimized write syscall!";
-    char *blanc ;
-    int result = write(1, message, strlen(message));
+    *message = "Hello, optimized write syscall!";
+    *blanc ;
+    result = write(1, message, strlen(message));
     // result = write(0, message, strlen(message));  // error case while fd = 0
     // result = write(1, blanc, strlen(blanc));  // EFAULT
     
@@ -43,23 +91,6 @@ main(void)
         write(1, error_msg, strlen(error_msg));
         perror();
     }
-    
-    /*------------------------------------------------------------
-     * Sección 4: Llamada al sistema write (sys_write)
-     * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
-     *------------------------------------------------------------*/
-
-	int pid;
-    pid = fork();
-    write(1, "mobe", 4);
-
-	// test getpid
-	itoa(getpid(), message);
-    result = write(1, message, strlen(message));
-    
-    itoa(pid, message);
-    result = write(1, "forkRes:", 8);
-    result = write(1, message, strlen(message));
     
 
     /*------------------------------------------------------------
