@@ -63,3 +63,30 @@ void printk(char *string)
   for (i = 0; string[i]; i++)
     printc(string[i]);
 }
+
+void print_number(int num)
+{
+  char buffer[12];  
+  int pos = 0;      
+  
+  if (num < 0) {
+    printc('-');
+    num = -num;  
+  }
+  
+  if (num == 0) {
+    printc('0');
+    return;
+  }
+  
+  while (num > 0 && pos < sizeof(buffer) - 1) {
+    buffer[pos++] = (num % 10) + '0';  
+    num /= 10;
+  }
+  
+  buffer[pos] = '\0';  
+  
+  while (--pos >= 0) {
+    printc(buffer[pos]);
+  }
+}

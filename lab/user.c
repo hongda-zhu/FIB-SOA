@@ -18,9 +18,9 @@ main(void)
      * Sección 5: Llamada al sistema fork (sys_fork)
      *------------------------------------------------------------*/
 
-    
     // Realizar el fork
     pid = fork();
+    
     
     if (pid < 0) {
         // Error en fork
@@ -79,6 +79,7 @@ main(void)
      *------------------------------------------------------------*/
     
     // test write
+    /*
     *message = "Hello, optimized write syscall!";
     *blanc ;
     result = write(1, message, strlen(message));
@@ -91,6 +92,7 @@ main(void)
         write(1, error_msg, strlen(error_msg));
         perror();
     }
+    */
     
 
     /*------------------------------------------------------------

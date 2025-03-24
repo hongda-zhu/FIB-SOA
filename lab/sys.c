@@ -148,7 +148,7 @@ int sys_fork() {
     
     // b) Inherit system data: copy the parent’s task_union to the child. Determine whether it is necessary to modify the pag table of the parent to access the child’s system data. The copy_data function can be used to copy.
 
-    copy_data(current(), child_task_union, TOTAL_PAGES * PAGE_SIZE);
+    copy_data(current(), child_task_union, TOTAL_PAGES);
 
     // c) Get a new pag directory to store the child’s address space and initialize the dir_pages_baseAddr field using the allocate_DIR routine.
 
