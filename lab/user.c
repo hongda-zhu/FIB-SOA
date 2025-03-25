@@ -53,12 +53,12 @@ main(void)
      *------------------------------------------------------------*/
 
 	// test getpid
-	itoa(getpid(), message);
+	/*itoa(getpid(), message);
     result = write(1, message, strlen(message));
     
     itoa(pid, message);
     result = write(1, "forkRes:", 8);
-    result = write(1, message, strlen(message));
+    result = write(1, message, strlen(message));*/
     
 
     /*------------------------------------------------------------
