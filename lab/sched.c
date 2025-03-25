@@ -76,6 +76,7 @@ void init_task1(void)
 	list_del( task1_list_head );
 	task1 = list_head_to_task_struct(task1_list_head);
 	task1->PID = 1;
+	task1->quantum = 100;
 	allocate_DIR(task1);
 	set_user_pages(task1);
 	union task_union * task1_union = (union task_union *) task1;
@@ -108,6 +109,65 @@ struct task_struct* current()
 	: "=g" (ret_value)
   );
   return (struct task_struct*)(ret_value&0xfffff000);
+}
+
+int get_quantum (struct task_struct *t) {
+	return t->quantum;
+}
+
+void set_quantum (struct task_struct *t, int new_quantum) {
+	t->quantum = new_quantum;
+}
+
+long lastTick = 0;
+void update_sched_data_rr() {
+	long ticks = get_ticks();
+	current()->stats_rr.elapsed_total_ticks += ticks - lastTick;
+	
+	if (current()->stats_rr.remaining_ticks < ticks - lastTick)
+		current()->stats_rr.remaining_ticks = 0;
+	else
+		current()->stats_rr.remaining_ticks -= ticks - lastTick;
+		
+	lastTick = ticks;
+}
+
+//returns: 1 if it is necessary to change the current process and 0 otherwise
+int needs_sched_rr() {
+	return (current()->stats_rr.remaining_ticks == 0) && !list_empty(&readyqueue);
+}
+
+void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
+	if (t->current_state != ST_RUN) {
+		list_del(&(t->list));
+	}
+	
+	if (dst_queue == 0) { //RUN
+		t->current_state = ST_RUN;
+		t->stats_rr.remaining_ticks = get_quantum(t);
+		t->stats_rr.total_trans++;
+	}
+	else {
+		if (dst_queue == &readyqueue) t->current_state = ST_READY;
+		else t->current_state = ST_BLOCKED;
+		list_add(&(t->list), dst_queue);
+	}
+}
+
+void sched_next_rr() {
+	struct list_head * ready_proc = list_first(&readyqueue);
+	update_process_state_rr(ready_proc, 0);
+	task_switch(list_head_to_task_struct(ready_proc));
+}
+
+void schedule() {
+	update_sched_data_rr();
+	if (needs_sched_rr()) {
+		if (current()->PID != 0) { //no idle
+			update_process_state_rr(current(), &readyqueue);
+		}
+		sched_next_rr();
+	}
 }
 
 extern void task_switch43(void*, long*);
