@@ -151,7 +151,7 @@ void clock_routine()
 {
     zeos_show_clock();
     ++zeos_ticks;
-    // schedule();
+    schedule();
     /*
     if ((zeos_ticks%10)==0)
     {

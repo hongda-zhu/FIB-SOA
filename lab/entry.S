@@ -152,7 +152,7 @@ sysenter_fin:
 ENTRY(get_ebp)
 	movl %ebp, %eax
 	ret
-
+//void task_switch(union task_union*t);
 ENTRY(task_switch)
 	pushl %ebp
 	movl %esp, %ebp

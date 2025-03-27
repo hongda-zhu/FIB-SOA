@@ -12,12 +12,13 @@ void perror();
 int __attribute__ ((__section__(".text.main")))
 main(void)
 {
-    int pid, result, x, len;
+    int pid, result, x, len, cnt;
     char buffer[128], time_str[12], *message, *error_msg, *blanc;
     /*------------------------------------------------------------
      * Sección 5: Llamada al sistema fork (sys_fork)
      *------------------------------------------------------------*/
 
+write(1, "ola\n", 4);
     // Realizar el fork
     pid = fork();
     
@@ -105,13 +106,31 @@ main(void)
     // *p = 'x'; 
 
     x = 0;
+    cnt = 0;
     while(1){
-        /*
-		if (++x == 20) {
+        
+		if (++x == 20000000) {
 			x = 0;
 			itoa(getpid(), buffer);
 			write(1, "Mi PID es: ", 11);
 			write(1, buffer, strlen(buffer));
+			
+			itoa(cnt, buffer);
+			write(1, "  cnt: ", 11);
+			write(1, buffer, strlen(buffer));
+			
+			write(1, "\n", 1);
+			
+			++cnt;
+			if (getpid() == 1) {
+				
+				if (cnt == 8) unblock(2);
+				if (cnt == 16) exit();
+			}
+			else if (getpid() == 2) {
+				if (cnt == 3) block();
+				if (cnt == 15) exit();
+			}
 		}
     
         ;  /* Se permanece en bucle infinito tras la excepción */

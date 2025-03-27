@@ -62,6 +62,9 @@ void init_idle (void)
 	list_del( idle_list_head ); 
 	idle_task = list_head_to_task_struct(idle_list_head);
 	idle_task->PID = 0;
+	idle_task->parent = 0; //nullptr
+	idle_task->pending_unblocks = 0;
+	INIT_LIST_HEAD(&idle_task->children);
 	allocate_DIR(idle_task);
 	union task_union * idle_task_union = (union task_union *) idle_task;
 	idle_task_union->stack[KERNEL_STACK_SIZE-1] = cpu_idle;
@@ -76,7 +79,11 @@ void init_task1(void)
 	list_del( task1_list_head );
 	task1 = list_head_to_task_struct(task1_list_head);
 	task1->PID = 1;
-	task1->quantum = 100;
+	task1->parent = idle_task;
+	task1->pending_unblocks = 0;
+	list_add_tail(&(task1->proc_anchor), &(idle_task->children));
+	INIT_LIST_HEAD(&task1->children);
+	task1->quantum = 2;
 	allocate_DIR(task1);
 	set_user_pages(task1);
 	union task_union * task1_union = (union task_union *) task1;
@@ -119,17 +126,11 @@ void set_quantum (struct task_struct *t, int new_quantum) {
 	t->quantum = new_quantum;
 }
 
-long lastTick = 0;
 void update_sched_data_rr() {
-	long ticks = get_ticks();
-	current()->stats_rr.elapsed_total_ticks += ticks - lastTick;
+	current()->stats_rr.elapsed_total_ticks++;
 	
-	if (current()->stats_rr.remaining_ticks < ticks - lastTick)
-		current()->stats_rr.remaining_ticks = 0;
-	else
-		current()->stats_rr.remaining_ticks -= ticks - lastTick;
-		
-	lastTick = ticks;
+	if (current()->stats_rr.remaining_ticks > 0)
+		current()->stats_rr.remaining_ticks--;
 }
 
 //returns: 1 if it is necessary to change the current process and 0 otherwise
@@ -138,26 +139,21 @@ int needs_sched_rr() {
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
-	if (t->current_state != ST_RUN) {
-		list_del(&(t->list));
-	}
-	
 	if (dst_queue == 0) { //RUN
-		t->current_state = ST_RUN;
+		list_del(&(t->list));
 		t->stats_rr.remaining_ticks = get_quantum(t);
 		t->stats_rr.total_trans++;
 	}
 	else {
-		if (dst_queue == &readyqueue) t->current_state = ST_READY;
-		else t->current_state = ST_BLOCKED;
-		list_add(&(t->list), dst_queue);
+		list_add_tail(&(t->list), dst_queue);
 	}
 }
 
 void sched_next_rr() {
 	struct list_head * ready_proc = list_first(&readyqueue);
-	update_process_state_rr(ready_proc, 0);
-	task_switch(list_head_to_task_struct(ready_proc));
+	struct task_struct * ready_task_struct = list_head_to_task_struct(ready_proc);
+	update_process_state_rr(ready_task_struct, 0);
+	task_switch(ready_task_struct);
 }
 
 void schedule() {

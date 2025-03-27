@@ -172,3 +172,129 @@ fork_exit:
     popl %ebp
     ret
 
+ENTRY(exit)
+    pushl %ebp
+    movl %esp, %ebp
+
+    movl $1, %eax
+
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %esi
+    pushl %ebx
+
+    pushl $exit_return
+
+    pushl %ebp
+    movl %esp, %ebp
+
+    sysenter
+
+exit_return:
+    popl %ebp
+    addl $4, %esp
+
+    popl %ebx
+    popl %esi
+    popl %edi
+    popl %edx
+    popl %ecx
+
+    cmpl $0, %eax
+    jge exit_exit
+
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+
+exit_exit:
+    movl %ebp, %esp
+    popl %ebp
+    ret
+    
+ENTRY(block)
+    pushl %ebp
+    movl %esp, %ebp
+
+    movl $19, %eax
+
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %esi
+    pushl %ebx
+
+    pushl $block_return
+
+    pushl %ebp
+    movl %esp, %ebp
+
+    sysenter
+
+block_return:
+    popl %ebp
+    addl $4, %esp
+
+    popl %ebx
+    popl %esi
+    popl %edi
+    popl %edx
+    popl %ecx
+
+    cmpl $0, %eax
+    jge block_exit
+
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+
+block_exit:
+    movl %ebp, %esp
+    popl %ebp
+    ret
+
+
+ENTRY(unblock)
+    pushl %ebp
+    movl %esp, %ebp
+    
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %esi
+    pushl %ebx
+    
+    movl 8(%ebp), %edx    /* pid */
+    
+    movl $18, %eax        
+    
+    pushl $unblock_return
+    
+    pushl %ebp
+    movl %esp, %ebp
+    
+    
+    sysenter
+
+unblock_return:
+    popl %ebp
+    addl $4, %esp
+
+    popl %ebx
+    popl %esi
+    popl %edi
+    popl %edx
+    popl %ecx
+    
+    cmpl $0, %eax
+    jge unblock_exit
+    
+    negl %eax
+    movl %eax, errno
+    movl $-1, %eax
+    
+unblock_exit:
+    movl %ebp, %esp
+    popl %ebp
+    ret

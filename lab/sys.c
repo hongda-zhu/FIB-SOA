@@ -89,10 +89,10 @@ int sys_fork() {
             // no hay frame libres
             //free_user_pages(child_task_struct);
             
-            // Intento de free_frame
-            for (pag2 = 0; pag2 < NUM_PAG_DATA; pag2++) {
-                free_frame(get_frame(PT_child, pag + PAG_LOG_INIT_DATA));
-                del_ss_pag(PT_child, pag + PAG_LOG_INIT_DATA);
+            // Intento de free_frame fins pag
+            for (pag2 = 0; pag2 < pag; pag2++) {
+                free_frame(get_frame(PT_child, pag2 + PAG_LOG_INIT_DATA));
+                del_ss_pag(PT_child, pag2 + PAG_LOG_INIT_DATA);
             }
             
             list_add(child_list_head, &freequeue);
@@ -142,7 +142,11 @@ int sys_fork() {
     
     // g) + h) actualizar campos que tienen que ser diferente el hijo y el padre
 	child_task_struct->PID = BASE_PID++;
-	child_task_struct->current_state = ST_READY;
+	child_task_struct->parent = current();
+	
+	INIT_LIST_HEAD(&child_task_struct->children);
+	
+	list_add_tail(&(child_task_struct->proc_anchor), &(current()->children));
 	
     // Calcular el contexto del hijo
     // Calcular la posición en la pila del hijo que corresponde al EBP del padre
@@ -158,7 +162,7 @@ int sys_fork() {
     
     // En lugar de mover ESP y luego escribir, modificamos directamente
     // la pila en las posiciones necesarias
-    stack_ptr[0] = (unsigned long)&ret_from_fork;  // Sobreescribir con dirección de retorno
+    *stack_ptr = (unsigned long)&ret_from_fork;  // Sobreescribir con dirección de retorno
     
     // Colocar el valor original en la posición anterior
     child_task_struct->k_esp = (unsigned long)&stack_ptr[-1];
@@ -189,40 +193,20 @@ int sys_write(int fd, char *buffer, int size) {
     
     bytes_left = size;
     
-    if (bytes_left <= BUFFER_SIZE - 1) {
-        if (copy_from_user(buffer, localbuffer, bytes_left) != 0)
-            return -EFAULT;
-        
-        localbuffer[bytes_left] = '\n';
-        
-        ret = sys_write_console(localbuffer, bytes_left + 1);
-        if (ret < 0)
-            return ret;
-        
-        return (ret > 0) ? size : ret - 1;
-    }
-    
     while (bytes_left > 0) {
         int chunk_size = (bytes_left > BUFFER_SIZE - 1) ? BUFFER_SIZE - 1 : bytes_left;
-        int is_last_chunk = (bytes_left <= BUFFER_SIZE - 1);
         
         if (copy_from_user(buffer + bytes_written, localbuffer, chunk_size) != 0)
             return -EFAULT;
-        
-        if (is_last_chunk) {
-            localbuffer[chunk_size] = '\n';
-            chunk_size++;
-        }
         
         ret = sys_write_console(localbuffer, chunk_size);
         if (ret < 0)
             return ret;
         
-        int actual_written = is_last_chunk ? ret - 1 : ret;
-        bytes_left -= actual_written;
-        bytes_written += actual_written;
+        bytes_left -= ret;
+        bytes_written += ret;
         
-        if (actual_written < chunk_size - (is_last_chunk ? 1 : 0))
+        if (ret < chunk_size)
             break;
     }
     
@@ -236,6 +220,64 @@ int sys_gettime()
     return zeos_ticks;
 }
 
-void sys_exit()
-{  
+extern struct list_head blocked;
+extern struct task_struct * idle_task;
+void sys_block() {
+	struct task_struct * curr = current();
+	if (curr->pending_unblocks != 0) {
+		curr->pending_unblocks--;
+		return;
+	}
+	curr->pending_unblocks = -1;
+	list_add_tail(&(curr->list), &blocked);
+	sched_next_rr();
+}
+
+int sys_unblock(int pid) {
+	struct list_head * e;
+	struct task_struct * child;
+	int found = 0;
+	list_for_each( e, &(current()->children) ) {
+		child = list_head_to_task_struct(e);
+		if (child->PID == pid) {
+			found = 1;
+			break;
+		}
+	}
+	if (!found) return -1;
+	
+	if (child->pending_unblocks < 0) { //blocked
+		child->pending_unblocks = 0;
+		update_process_state_rr(child, &readyqueue);
+	}
+	else {
+		child->pending_unblocks++;
+	}
+	return 0;
+}
+
+void sys_exit() {
+	struct task_struct * curr = current();
+	int pt = get_PT(current());
+	int pag;
+	
+	//remove child from parent
+	list_del(&curr->proc_anchor);
+	
+	//make children parents be idle process
+	struct list_head * e;
+	printk("x1");
+	list_for_each( e, &(curr->children) ) {
+		struct task_struct * child = list_head_to_task_struct(e);
+		child->parent = idle_task;
+		list_add_tail(&(idle_task->children), &(child->proc_anchor));
+	}
+	printk("x2");
+	//free data section
+	for (pag = 0; pag < NUM_PAG_DATA; pag++) {
+		free_frame(get_frame(pt, pag + PAG_LOG_INIT_DATA));
+		del_ss_pag(pt, pag + PAG_LOG_INIT_DATA);
+	}printk("x3");
+	list_add_tail(&(curr->list), &freequeue);printk("x4");
+	sched_next_rr();
 }
