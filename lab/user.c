@@ -106,13 +106,14 @@ main(void)
 
     x = 0;
     while(1){
+        /*
 		if (++x == 20) {
 			x = 0;
 			itoa(getpid(), buffer);
 			write(1, "Mi PID es: ", 11);
 			write(1, buffer, strlen(buffer));
 		}
-		
+    
         ;  /* Se permanece en bucle infinito tras la excepción */
     }
 

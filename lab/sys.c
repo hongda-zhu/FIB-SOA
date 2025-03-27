@@ -109,20 +109,15 @@ int sys_fork() {
         set_ss_pag(PT_child, pag, get_frame(PT_parent, pag));
     }
 
-    // CODE: mismo sitio que del padre (apartado e. i)
-    for (pag = 0; pag < NUM_PAG_CODE; pag++) {
-        set_ss_pag(PT_child, pag + PAG_LOG_INIT_CODE, get_frame(PT_parent, pag + PAG_LOG_INIT_CODE));
-    }
-
     // DATA: NO mismo sitio que del padre, debe estar estos datos en un nuevo lugar (apartado e) ii + apartado f)
     
     // f: Para cada página de datos y pila del proceso
-    for (pag = NUM_PAG_KERNEL+NUM_PAG_CODE; pag < NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++) {
+    for (pag = PAG_LOG_INIT_DATA; pag < PAG_LOG_INIT_DATA+NUM_PAG_DATA; pag++) {
         // Calcular direcciones base
         void *parent_addr = (void*)(pag << 12); // Dirección original en el padre
         
         // Calcular ubicación temporal para el mapeo
-        int temp_page = pag + NUM_PAG_DATA;
+        int temp_page = pag + NUM_PAG_DATA + NUM_PAG_CODE;
         void *temp_addr = (void*)(temp_page << 12);
         
         // 1. Crear mapeo temporal: hacer accesible la página física del hijo 
@@ -136,6 +131,12 @@ int sys_fork() {
         // 3. Eliminar el mapeo temporal
         del_ss_pag(PT_parent, temp_page);
     }
+
+    // CODE: mismo sitio que del padre (apartado e. i)
+    for (pag = 0; pag < NUM_PAG_CODE; pag++) {
+        set_ss_pag(PT_child, pag + PAG_LOG_INIT_CODE, get_frame(PT_parent, pag + PAG_LOG_INIT_CODE));
+    }
+
     // f.c) flush TLB
     set_cr3(get_DIR(current()));
     
@@ -143,16 +144,25 @@ int sys_fork() {
 	child_task_struct->PID = BASE_PID++;
 	child_task_struct->current_state = ST_READY;
 	
-	// Preparar el contexto de la pila para el retorno
-	child_task_struct->k_esp = get_ebp();
-	
-	// Configurar register_esp para apuntar justo después del EBP
-	child_task_struct->k_esp--;
-
-	// Anadir dirección de ret_from_fork en la pila y EBP
-	child_task_union->stack[(long)(child_task_struct->k_esp) & 0xFFF] = 0;
-	child_task_union->stack[((long)(child_task_struct->k_esp) & 0xFFF) + 1] = ret_from_fork;
+    // Calcular el contexto del hijo
+    // Calcular la posición en la pila del hijo que corresponde al EBP del padre
+    unsigned long parent_stack_pos = (unsigned long)get_ebp();
+    unsigned long offset = parent_stack_pos - (unsigned long)current();
+    unsigned long child_stack_pos = (unsigned long)child_task_union + offset;
     
+    // Guardar el valor original que está en esa posición
+    unsigned long original_value = *((unsigned long*)child_stack_pos);
+    
+    // Preparar la nueva estructura de pila para el retorno
+    unsigned long *stack_ptr = (unsigned long*)child_stack_pos;
+    
+    // En lugar de mover ESP y luego escribir, modificamos directamente
+    // la pila en las posiciones necesarias
+    stack_ptr[0] = (unsigned long)&ret_from_fork;  // Sobreescribir con dirección de retorno
+    
+    // Colocar el valor original en la posición anterior
+    child_task_struct->k_esp = (unsigned long)&stack_ptr[-1];
+    stack_ptr[-1] = original_value;  // El valor del EBP salvado
     // Añadir el hijo a la cola de procesos listos
     list_add_tail(&(child_task_struct->list), &readyqueue);
     
