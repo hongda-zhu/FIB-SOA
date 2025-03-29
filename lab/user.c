@@ -66,6 +66,8 @@ write(1, "ola\n", 4);
      * Sección 3: Llamada al sistema gettime
      * La función gettime() retorna el número de ticks transcurridos desde el arranque del sistema
      *------------------------------------------------------------*/
+    
+    /*
     write(1, "\n", 1); 
     x= gettime();
 
@@ -73,7 +75,8 @@ write(1, "ola\n", 4);
     itoa(x, time_str); 
     len = strlen(time_str);
     write(1, time_str, len);
-
+	*/
+	
     /*------------------------------------------------------------
      * Sección 2: Llamada al sistema write (sys_write)
      * Envía un mensaje a la pantalla, comprobando que la llamada al sistema write funciona correctamente
@@ -108,6 +111,9 @@ write(1, "ola\n", 4);
     x = 0;
     cnt = 0;
     while(1){
+	/*------------------------------------------------------------
+     * Sección 6: Schedule + sysexit + block y unblock
+     *------------------------------------------------------------*/
         
 		if (++x == 20000000) {
 			x = 0;
@@ -132,6 +138,7 @@ write(1, "ola\n", 4);
 				if (cnt == 15) exit();
 			}
 		}
+		
     
         ;  /* Se permanece en bucle infinito tras la excepción */
     }
