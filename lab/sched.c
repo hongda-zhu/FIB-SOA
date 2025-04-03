@@ -150,8 +150,13 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 }
 
 void sched_next_rr() {
+	struct task_struct * ready_task_struct;
 	struct list_head * ready_proc = list_first(&readyqueue);
-	struct task_struct * ready_task_struct = list_head_to_task_struct(ready_proc);
+	if (ready_proc == 0) //no hi ha processos, posar idle
+		ready_task_struct = idle_task;
+	else
+		ready_task_struct = list_head_to_task_struct(ready_proc);
+		
 	update_process_state_rr(ready_task_struct, 0);
 	task_switch(ready_task_struct);
 }

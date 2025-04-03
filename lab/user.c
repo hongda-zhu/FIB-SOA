@@ -109,7 +109,7 @@ write(1, "ola\n", 4);
     cnt = 0;
     while(1){
         
-		if (++x == 20000000) {
+		if (++x == 20000) {
 			x = 0;
 			itoa(getpid(), buffer);
 			write(1, "Mi PID es: ", 11);
