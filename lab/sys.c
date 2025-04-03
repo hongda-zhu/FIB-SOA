@@ -148,6 +148,8 @@ int sys_fork() {
 	
 	list_add_tail(&(child_task_struct->proc_anchor), &(current()->children));
 	
+	/*
+	//primera implementación
     // Calcular el contexto del hijo
     // Calcular la posición en la pila del hijo que corresponde al EBP del padre
     unsigned long parent_stack_pos = (unsigned long)get_ebp();
@@ -167,6 +169,13 @@ int sys_fork() {
     // Colocar el valor original en la posición anterior
     child_task_struct->k_esp = (unsigned long)&stack_ptr[-1];
     stack_ptr[-1] = original_value;  // El valor del EBP salvado
+	*/
+    
+    // segunda implementación que es más fácil 
+    child_task_union->stack[KERNEL_STACK_SIZE - 18] = ret_from_fork;
+    child_task_union->stack[KERNEL_STACK_SIZE - 19] = 0;
+    child_task_struct->k_esp = &child_task_union->stack[KERNEL_STACK_SIZE-19];  
+    
     // Añadir el hijo a la cola de procesos listos
     list_add_tail(&(child_task_struct->list), &readyqueue);
     

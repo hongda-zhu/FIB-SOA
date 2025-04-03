@@ -140,15 +140,29 @@ int needs_sched_rr() {
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
 	if (dst_queue == 0) { //RUN
-		list_del(&(t->list));
-		t->stats_rr.remaining_ticks = get_quantum(t);
-		t->stats_rr.total_trans++;
+			list_del(&(t->list));
+			t->stats_rr.remaining_ticks = get_quantum(t);
+			t->stats_rr.total_trans++;
 	}
 	else {
 		list_add_tail(&(t->list), dst_queue);
 	}
 }
 
+void sched_next_rr () {
+	struct list_head * lh;
+	struct task_struct * ts;
+	if (!list_empty(&readyqueue)) {
+		lh = list_first(&readyqueue);
+		ts = list_head_to_task_struct(lh);
+	} else {
+		ts = idle_task;
+	}
+	
+	update_process_state_rr(ts, 0);
+	task_switch(ts);
+}
+/*
 void sched_next_rr() {
 	struct task_struct * ready_task_struct;
 	struct list_head * ready_proc = list_first(&readyqueue);
@@ -160,6 +174,7 @@ void sched_next_rr() {
 	update_process_state_rr(ready_task_struct, 0);
 	task_switch(ready_task_struct);
 }
+*/
 
 void schedule() {
 	update_sched_data_rr();
