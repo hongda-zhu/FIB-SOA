@@ -1,0 +1,7 @@
+1. (3 puntos) Comprensión de Zeos 
+a) (1 punto)¿A que rutina corresponde la dirección 0x10706?¿Cómo lo has 
+hallado?  
+b) (1 punto) ¿En qué página se encuentra la pila de sistema del proceso inicial?. 
+c) (1 punto)  Dada la función shared implementada en un fichero exam.o. Indica  la 
+línea (o líneas) de comandos necesarias para linkar este objeto y que puedas 
+usar la función tanto desde el código de sistema como del de usuario.  
