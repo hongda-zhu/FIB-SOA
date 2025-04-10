@@ -90,3 +90,19 @@ void print_number(int num)
     printc(buffer[pos]);
   }
 }
+
+void print_hex(int num)
+{
+	char hex_buffer[9];
+    hex_buffer[8] = '\0';  // Asegura que la cadena termine correctamente
+    
+    // Convierte el valor a hexadecimal, dígito por dígito
+    for (int i = 7; i >= 0; i--) {
+        int digit = num & 0xF;  // Obtiene el último dígito hexadecimal
+        hex_buffer[i] = (digit < 10) ? ('0' + digit) : ('A' + digit - 10);
+        num >>= 4;  // Desplaza 4 bits a la derecha (un dígito hexadecimal)
+    }
+    
+    printk(hex_buffer);
+    printk("\n");
+}
