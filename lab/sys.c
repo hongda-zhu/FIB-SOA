@@ -44,7 +44,7 @@ int sys_getpid()
 int ret_from_fork() {
 	return 0;
 }
-void mobe(){printc('a');}
+
 extern struct list_head freequeue;
 extern struct list_head readyqueue;
 extern long* get_ebp();
@@ -80,8 +80,8 @@ int sys_fork() {
     */
 
     int pag, pag2, new_frame;
-    int PT_child = get_PT(child_task_struct);
-    int PT_parent = get_PT(current());
+    page_table_entry* PT_child = get_PT(child_task_struct);
+    page_table_entry* PT_parent = get_PT(current());
 
     for (pag = 0; pag < NUM_PAG_DATA; pag++) {
         new_frame = alloc_frame();
@@ -172,7 +172,7 @@ int sys_fork() {
 	*/
     
     // segunda implementación que es más fácil 
-    child_task_union->stack[KERNEL_STACK_SIZE - 18] = ret_from_fork;
+    child_task_union->stack[KERNEL_STACK_SIZE - 18] = (unsigned long) ret_from_fork;
     child_task_union->stack[KERNEL_STACK_SIZE - 19] = 0;
     child_task_struct->k_esp = &child_task_union->stack[KERNEL_STACK_SIZE-19];  
     
@@ -267,7 +267,7 @@ int sys_unblock(int pid) {
 
 void sys_exit() {
 	struct task_struct * curr = current();
-	int pt = get_PT(current());
+	page_table_entry* pt = get_PT(current());
 	int pag;
 	
 	//remove child from parent
@@ -275,18 +275,17 @@ void sys_exit() {
 	
 	//make children parents be idle process
 	struct list_head * e;
-	printk("x1");
 	list_for_each( e, &(curr->children) ) {
 		struct task_struct * child = list_head_to_task_struct(e);
 		child->parent = idle_task;
 		list_add_tail(&(idle_task->children), &(child->proc_anchor));
 	}
-	printk("x2");
+	
 	//free data section
 	for (pag = 0; pag < NUM_PAG_DATA; pag++) {
 		free_frame(get_frame(pt, pag + PAG_LOG_INIT_DATA));
 		del_ss_pag(pt, pag + PAG_LOG_INIT_DATA);
-	}printk("x3");
-	list_add_tail(&(curr->list), &freequeue);printk("x4");
+	}
+	list_add_tail(&(curr->list), &freequeue);
 	sched_next_rr();
 }

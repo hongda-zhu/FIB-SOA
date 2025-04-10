@@ -145,6 +145,7 @@ void init_zeos_ticks()
 	zeos_ticks = 0;
 }
 
+extern void schedule();
 extern struct task_struct *idle_task;
 extern struct task_struct *task1;
 void clock_routine()

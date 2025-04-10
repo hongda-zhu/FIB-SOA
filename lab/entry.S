@@ -148,10 +148,21 @@ sysenter_fin:
     sti                 // Enable interrupts again
     sysexit
 
-//xd
 ENTRY(get_ebp)
 	movl %ebp, %eax
 	ret
+
+//not tested xd
+ENTRY(get_esp)
+	movl %esp, %eax
+	addl $-4, %eax
+	ret
+
+//not tested xd
+ENTRY(get_eip)
+	movl (%esp), %eax
+	ret
+
 //void task_switch(union task_union*t);
 ENTRY(task_switch)
 	pushl %ebp
@@ -168,8 +179,8 @@ ENTRY(task_switch)
 	popl %ebp
 	ret
 
-//task_switch43(&(current->k_esp), t->k_esp)
-ENTRY(task_switch43)
+//inner_task_switch_asm(&(current->k_esp), t->k_esp)
+ENTRY(inner_task_switch_asm)
 	pushl %ebp
 	movl %esp, %ebp
 	movl 8(%ebp), %eax

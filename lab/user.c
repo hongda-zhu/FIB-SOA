@@ -8,7 +8,10 @@ int add(int a, int b) {
 int addASM(int par1,int par2);
 int gettime();
 void perror();
+void block();
+void unblock(int pid);
 
+extern int get_eip();
 int __attribute__ ((__section__(".text.main")))
 main(void)
 {
@@ -18,7 +21,8 @@ main(void)
      * Sección 5: Llamada al sistema fork (sys_fork)
      *------------------------------------------------------------*/
 
-write(1, "ola\n", 4);
+	write(1, "ola\n", 4);
+	
     // Realizar el fork
     pid = fork();
     

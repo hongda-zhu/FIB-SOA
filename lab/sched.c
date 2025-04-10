@@ -49,9 +49,10 @@ void cpu_idle(void)
 {
 	__asm__ __volatile__("sti": : :"memory");
 
+	printk("idle start\n");
 	while(1)
 	{
-		printk("idle");
+		//
 	;
 	}
 }
@@ -67,7 +68,7 @@ void init_idle (void)
 	INIT_LIST_HEAD(&idle_task->children);
 	allocate_DIR(idle_task);
 	union task_union * idle_task_union = (union task_union *) idle_task;
-	idle_task_union->stack[KERNEL_STACK_SIZE-1] = cpu_idle;
+	idle_task_union->stack[KERNEL_STACK_SIZE-1] = (unsigned long) cpu_idle;
 	idle_task_union->stack[KERNEL_STACK_SIZE-2] = 0;
 	idle_task->k_esp = &(idle_task_union->stack[KERNEL_STACK_SIZE-2]);
 }
@@ -78,6 +79,7 @@ void init_task1(void)
 	struct list_head * task1_list_head = list_first( &freequeue );
 	list_del( task1_list_head );
 	task1 = list_head_to_task_struct(task1_list_head);
+	//print_number((unsigned long)(task1)>>12);
 	task1->PID = 1;
 	task1->parent = idle_task;
 	task1->pending_unblocks = 0;
@@ -88,10 +90,14 @@ void init_task1(void)
 	set_user_pages(task1);
 	union task_union * task1_union = (union task_union *) task1;
 	
-	tss.esp0 = &(task1_union->stack[KERNEL_STACK_SIZE]);
-	writeMSR(0x175, &(task1_union->stack[KERNEL_STACK_SIZE]));
+	tss.esp0 = (DWord) &(task1_union->stack[KERNEL_STACK_SIZE]);
+	writeMSR(0x175, (unsigned long) &(task1_union->stack[KERNEL_STACK_SIZE]));
 	
 	set_cr3(task1->dir_pages_baseAddr);
+	
+	//printk("pila main sistema inicial: ");
+	//print_number(get_frame(get_PT(task1), (unsigned long)(&task[4])>>12));
+	//printk("\n");
 }
 
 void init_freequeue (void) {
@@ -140,9 +146,9 @@ int needs_sched_rr() {
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue) {
 	if (dst_queue == 0) { //RUN
-			list_del(&(t->list));
-			t->stats_rr.remaining_ticks = get_quantum(t);
-			t->stats_rr.total_trans++;
+		if (t != idle_task) list_del(&(t->list));
+		t->stats_rr.remaining_ticks = get_quantum(t);
+		t->stats_rr.total_trans++;
 	}
 	else {
 		list_add_tail(&(t->list), dst_queue);
@@ -160,7 +166,7 @@ void sched_next_rr () {
 	}
 	
 	update_process_state_rr(ts, 0);
-	task_switch(ts);
+	task_switch((union task_union *) ts);
 }
 /*
 void sched_next_rr() {
@@ -186,14 +192,14 @@ void schedule() {
 	}
 }
 
-extern void task_switch43(void*, long*);
+extern void inner_task_switch_asm(void*, unsigned long*);
 void inner_task_switch(union task_union*t) {
 	//t = (union task_union*)idle_task;
 	//long mobe = 1;
-	tss.esp0 = &(t->stack[KERNEL_STACK_SIZE]);
-	writeMSR(0x175, &(t->stack[KERNEL_STACK_SIZE]));
+	tss.esp0 = (DWord) &(t->stack[KERNEL_STACK_SIZE]);
+	writeMSR(0x175, (unsigned long) &(t->stack[KERNEL_STACK_SIZE]));
 	set_cr3(t->task.dir_pages_baseAddr);
 	//long* ebp = &mobe + 4;
 	//current()->k_esp = ebp;
-	task_switch43(&(current()->k_esp), t->task.k_esp);
+	inner_task_switch_asm(&(current()->k_esp), t->task.k_esp);
 }
