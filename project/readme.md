@@ -2,7 +2,7 @@
 
 ## 1. Objetivo General del Proyecto
 
-El objetivo principal es **mejorar el sistema operativo ZeOS** para que sea capaz de **soportar la ejecución de un videojuego interactivo**. Actualmente, ZeOS carece de las funcionalidades necesarias para manejar eficientemente la entrada de teclado en tiempo real, la salida gráfica para los frames del juego, y la concurrencia requerida para la lógica del juego. El profesor sugiere implementar un juego tipo Pac-Man, pero deja abierta la posibilidad de crear otros juegos como Snake o Arkanoid, o cualquier otro que demuestre las capacidades añadidas. Lo fundamental no es el juego en sí, sino **crear el soporte necesario dentro del sistema operativo** para que este tipo de aplicaciones sean posibles.
+El objetivo principal es **mejorar el sistema operativo ZeOS** para que sea capaz de **soportar la ejecución de un videojuego interactivo**. Actualmente, ZeOS carece de las funcionalidades necesarias para manejar eficientemente la entrada de teclado en tiempo real, la salida gráfica para los frames del juego, y la concurrencia requerida para la lógica del juego. El Pajuelo sugiere implementar un juego tipo Pac-Man, pero deja abierta la posibilidad de crear otros juegos como Snake o Arkanoid, o cualquier otro que demuestre las capacidades añadidas. Lo fundamental no es el juego en sí, sino **crear el soporte necesario dentro del sistema operativo** para que este tipo de aplicaciones sean posibles.
 
 ## 2. Arquitectura Requerida para el Videojuego
 
@@ -183,7 +183,7 @@ Este es el milestone final donde se integran todas las piezas anteriores para cr
 ## 8. Evaluación y Logística
 
 * **Orden y Dependencia:** Los milestones deben realizarse y entregarse en orden (1 al 5). La evaluación de un milestone requiere que los anteriores sean correctos.
-* **Feedback Continuo:** Se recomienda **enviar cada milestone por correo electrónico al profesor** para validación (`ok` / `no ok` con explicación) antes de continuar con el siguiente. Esto asegura los puntos y evita problemas posteriores.
+* **Feedback Continuo:** Se recomienda **enviar cada milestone por correo electrónico al Pajuelo** para validación (`ok` / `no ok` con explicación) antes de continuar con el siguiente. Esto asegura los puntos y evita problemas posteriores.
 * **Entrega Final:** Es **obligatorio** realizar al menos una entrega final en la plataforma Racó. En esta entrega se debe indicar explícitamente hasta qué milestone se ha completado y validado.
 * **Nota:** Cada milestone funcional aporta 2 puntos a la nota final del proyecto. No es necesario completar los 5 milestones para obtener una nota; cada estudiante decide hasta dónde llegar.
 * **Autonomía y Decisiones:** El enunciado no cubre todos los detalles de implementación (ej: números exactos para las syscalls, gestión de errores específicos, qué hacer si `fork` es llamado por un proceso con múltiples threads). Los estudiantes deben **tomar decisiones de diseño razonables**, buscando información si es necesario (ej: comportamiento estándar en Linux) y justificándolas si se requiere.
