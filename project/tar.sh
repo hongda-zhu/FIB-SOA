@@ -1,1 +1,1 @@
-tar -czf part1.tar.gz Project/
+tar -czf part2.tar.gz Project/

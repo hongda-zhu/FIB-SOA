@@ -125,6 +125,8 @@ int sys_fork(void)
 
   uchild->task.PID=++global_PID;
   uchild->task.state=ST_READY;
+  
+  uchild->task.screen_buffer = NULL;
 
   int register_ebp;		/* frame pointer */
   /* Map Parent's ebp to child's stack */
@@ -205,6 +207,13 @@ void sys_exit()
   
   current()->PID=-1;
   
+  if (current()->screen_buffer != NULL) {
+	  page_table_entry* pt = get_PT(current());
+	  int frame = get_frame(pt, (unsigned int)current()->screen_buffer >> 12);
+	  current()->screen_buffer = NULL;
+	  free_frame(frame);
+  }
+  
   /* Restarts execution of the next process */
   sched_next_rr();
 }
@@ -260,4 +269,29 @@ int sys_pause(int milliseconds)
 	update_process_state_rr(current(), &blocked);
 	sched_next_rr();
 	return 0;
+}
+
+int alloc_frame();
+void* sys_StartScreen(void)
+{
+	if (current()->screen_buffer != NULL) {
+		return current()->screen_buffer;
+	}
+	
+	int frame = alloc_frame();
+	if (frame == -1) {
+		return (void *)-1;
+	}
+	
+	page_table_entry * pt = get_PT(current());
+	
+	int logic_page = get_free_logical_page(pt, PAG_LOG_INIT_DATA + NUM_PAG_DATA);
+	if (logic_page == -1) {
+		//couldn't find free logical page (should never happen)
+		free_frame(frame);
+		return (void *)-1;
+	}
+	set_ss_pag(pt, logic_page, frame);
+	current()->screen_buffer = (void *) (logic_page << 12);
+	return current()->screen_buffer;
 }

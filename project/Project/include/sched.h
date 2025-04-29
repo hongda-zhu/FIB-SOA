@@ -25,6 +25,8 @@ struct task_struct {
   int total_quantum;		/* Total quantum of the process */
   struct stats p_stats;		/* Process stats */
   unsigned long unpause_tick; /* Tick to stop being blocked */
+  //unsigned int screen_frame; /* Physical frame for screen buffer of this thread */
+  void* screen_buffer; /* Start of the screen buffer (logic address)*/
 };
 
 union task_union {

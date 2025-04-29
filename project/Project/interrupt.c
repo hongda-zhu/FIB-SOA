@@ -36,11 +36,16 @@ char keyboard_state[256];
 int zeos_ticks = 0;
 
 unsigned long get_ticks(void);
+void copy_data(void *start, void *dest, int size);
 extern struct list_head blocked;
 void clock_routine()
 {
   zeos_show_clock();
   zeos_ticks ++;
+  
+  if (current()->screen_buffer != NULL) {
+	  copy_data(current()->screen_buffer, (void*)0xB8000, 80*25*2); //80x25 screen, each pixel occupies 2 bytes. screen buffer at 0xB8000
+  }
   
   //unpause processes
   struct list_head * e;

@@ -266,3 +266,12 @@ void del_ss_pag(page_table_entry *PT, unsigned logical_page)
 unsigned int get_frame (page_table_entry *PT, unsigned int logical_page){
      return PT[logical_page].bits.pbase_addr; 
 }
+
+
+unsigned int get_free_logical_page(page_table_entry* PT, unsigned int start_search) {
+	for (int i = start_search; i < TOTAL_PAGES; i++) 
+		if (PT[i].bits.present == 0) {
+			return i;
+		}
+	return -1;
+}

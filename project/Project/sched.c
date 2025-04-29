@@ -167,6 +167,8 @@ void init_idle (void)
   c->PID=0;
 
   c->total_quantum=DEFAULT_QUANTUM;
+  
+  c->screen_buffer = NULL;
 
   init_stats(&c->p_stats);
 
@@ -194,6 +196,8 @@ void init_task1(void)
   c->total_quantum=DEFAULT_QUANTUM;
 
   c->state=ST_RUN;
+  
+  c->screen_buffer = NULL;
 
   remaining_quantum=c->total_quantum;
 
