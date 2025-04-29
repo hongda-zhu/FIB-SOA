@@ -227,6 +227,7 @@ void init_sched()
 {
   init_freequeue();
   INIT_LIST_HEAD(&readyqueue);
+  INIT_LIST_HEAD(&blocked);
 }
 
 struct task_struct* current()

@@ -31,21 +31,39 @@ char char_map[] =
   '\0','\0'
 };
 
+char keyboard_state[256];
+
 int zeos_ticks = 0;
 
+unsigned long get_ticks(void);
+extern struct list_head blocked;
 void clock_routine()
 {
   zeos_show_clock();
   zeos_ticks ++;
   
+  //unpause processes
+  struct list_head * e;
+  struct list_head * e_temp;
+  list_for_each_safe( e, e_temp, &blocked ) {
+	struct task_struct * proc = list_head_to_task_struct(e);
+	if (proc->unpause_tick > 0 && proc->unpause_tick <= get_ticks()) {
+		update_process_state_rr(proc, &readyqueue);
+	}
+  }
+  
   schedule();
 }
+
 
 void keyboard_routine()
 {
   unsigned char c = inb(0x60);
+  int make = (c & 0x80) == 0;
+  int key = c&0x7F;
   
-  if (c&0x80) printc_xy(0, 0, char_map[c&0x7f]);
+  //if (make) printc_xy(0, 0, char_map[key]);
+  keyboard_state[char_map[key]] = make;
 }
 
 void setInterruptHandler(int vector, void (*handler)(), int maxAccessibleFromPL)
@@ -122,3 +140,8 @@ void setIdt()
   set_idt_reg(&idtR);
 }
 
+void initKeyboardState()
+{
+	int i;
+	for (i = 0; i < 256; i++) keyboard_state[i] = 0;
+}

@@ -236,3 +236,28 @@ int sys_get_stats(int pid, struct stats *st)
   }
   return -ESRCH; /*ESRCH */
 }
+
+extern char* keyboard_state;
+int sys_GetKeyboardState(char* keyboard)
+{
+	int res;
+	if (!access_ok(VERIFY_WRITE, keyboard, 256)) return -EFAULT;
+	res = copy_to_user(&keyboard_state, keyboard, 256);
+	if (res < 0) return -EFAULT;
+	return 0;
+}
+
+unsigned long get_ticks(void);
+extern struct list_head blocked;
+int sys_pause(int milliseconds)
+{
+	if (milliseconds < 0) return -EINVAL;
+	
+	int ticks = milliseconds*18/1000;
+	if (ticks < 1) ticks = 1;
+	
+	current()->unpause_tick = get_ticks() + ticks;
+	update_process_state_rr(current(), &blocked);
+	sched_next_rr();
+	return 0;
+}

@@ -28,4 +28,7 @@ int yield();
 
 int get_stats(int pid, struct stats *st);
 
+int get_keyboard_state(char* keyboard);
+
+int pause(int milliseconds);
 #endif  /* __LIBC_H__ */
