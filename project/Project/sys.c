@@ -120,6 +120,35 @@ int sys_fork(void)
     copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
     del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
   }
+  
+  
+  if (current()->screen_buffer != NULL) {
+	new_ph_pag=alloc_frame();
+	int alfredo = get_free_logical_page(parent_PT, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
+    if (new_ph_pag != -1 && alfredo != -1) /* One page allocated */
+    {
+	  set_ss_pag(process_PT, ((int)(current()->screen_buffer))>>12, new_ph_pag);
+      set_ss_pag(parent_PT, alfredo, new_ph_pag);
+      copy_data(current()->screen_buffer, (void*)((alfredo)<<12), 80*25*2);
+      del_ss_pag(parent_PT, alfredo);
+    }
+    else {
+      /* Deallocate allocated pages. Up to pag. */
+      for (i=0; i<pag; i++)
+      {
+        free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+        del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+      }
+      /* Deallocate task_struct */
+      list_add_tail(lhcurrent, &freequeue);
+      
+      free_frame(new_ph_pag);
+      
+      /* Return error */
+      return -EAGAIN; 
+    }
+  }
+  
   /* Deny access to the child's memory space */
   set_cr3(get_DIR(current()));
 
@@ -210,6 +239,7 @@ void sys_exit()
   if (current()->screen_buffer != NULL) {
 	  page_table_entry* pt = get_PT(current());
 	  int frame = get_frame(pt, (unsigned int)current()->screen_buffer >> 12);
+	  del_ss_pag(process_PT, ((int)current()->screen_buffer)>>12);
 	  current()->screen_buffer = NULL;
 	  free_frame(frame);
   }
@@ -285,7 +315,7 @@ void* sys_StartScreen(void)
 	
 	page_table_entry * pt = get_PT(current());
 	
-	int logic_page = get_free_logical_page(pt, PAG_LOG_INIT_DATA + NUM_PAG_DATA);
+	int logic_page = get_free_logical_page(pt, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
 	if (logic_page == -1) {
 		//couldn't find free logical page (should never happen)
 		free_frame(frame);
