@@ -27,6 +27,14 @@ struct task_struct {
   unsigned long unpause_tick; /* Tick to stop being blocked */
   //unsigned int screen_frame; /* Physical frame for screen buffer of this thread */
   void* screen_buffer; /* Start of the screen buffer (logic address)*/
+  
+  int TID; /* Thread ID */
+  void* user_stack_sp;
+  int priority;
+  struct list_head threads_list; 
+  struct task_struct* master;
+  int num_threads;
+  struct list_head threads;
 };
 
 union task_union {

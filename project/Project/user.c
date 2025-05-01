@@ -21,7 +21,7 @@ int __attribute__ ((__section__(".text.main")))
      /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
 	char keyboard_state[256];
 	screen_buffer = (char*)StartScreen();
-	if (fork() == 0) {
+	if (fork() != 0) {
 		exit();
 	}
 	char buff[256];

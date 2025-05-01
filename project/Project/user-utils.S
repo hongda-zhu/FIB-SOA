@@ -67,6 +67,25 @@ ENTRY(fork)
 	popl %ebp
 	ret
 
+/* int clone(int what, void *(*func)(void*), void *param, int stack_size) */
+ENTRY(clone)
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %ebx;  // Save EBX, ESI and EDI if modified
+	pushl %esi
+	movl $7, %eax
+	movl 0x8(%ebp), %ebx;	//what
+	movl 0xC(%ebp), %ecx;	//*func
+	movl 0x10(%ebp), %edx;	//*param
+	movl 0x14(%ebp), %esi;  //stack_size
+	call syscall_sysenter
+	popl %esi
+	popl %ebx
+	test %eax, %eax
+	js nok	// if (eax < 0) -> 
+	popl %ebp
+	ret
+
 /* void exit() */
 ENTRY(exit)
 	pushl %ebp

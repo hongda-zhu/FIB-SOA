@@ -22,6 +22,8 @@ int getpid();
 
 int fork();
 
+int clone(int what, void *(*func)(void*), void *param, int stack_size);
+
 void exit();
 
 int yield();

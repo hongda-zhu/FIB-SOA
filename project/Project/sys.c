@@ -50,14 +50,16 @@ int sys_getpid()
 }
 
 int global_PID=1000;
+int global_TID=1000;
 
 int ret_from_fork()
 {
   return 0;
 }
 
-int sys_fork(void)
-{
+//what: 0 is CLONE_PROCESS, 1 is CLONE_THREAD
+int sys_clone(int what, void *(*func)(void*), void *param, int stack_size) 
+{	
   struct list_head *lhcurrent = NULL;
   union task_union *uchild;
   
@@ -73,89 +75,123 @@ int sys_fork(void)
   /* Copy the parent's task struct to child's */
   copy_data(current(), uchild, sizeof(union task_union));
   
-  /* new pages dir */
-  allocate_DIR((struct task_struct*)uchild);
-  
-  /* Allocate pages for DATA+STACK */
-  int new_ph_pag, pag, i;
   page_table_entry *process_PT = get_PT(&uchild->task);
-  for (pag=0; pag<NUM_PAG_DATA; pag++)
-  {
-    new_ph_pag=alloc_frame();
-    if (new_ph_pag!=-1) /* One page allocated */
-    {
-      set_ss_pag(process_PT, PAG_LOG_INIT_DATA+pag, new_ph_pag);
-    }
-    else /* No more free pages left. Deallocate everything */
-    {
-      /* Deallocate allocated pages. Up to pag. */
-      for (i=0; i<pag; i++)
-      {
-        free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
-        del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
-      }
-      /* Deallocate task_struct */
-      list_add_tail(lhcurrent, &freequeue);
-      
-      /* Return error */
-      return -EAGAIN; 
-    }
-  }
-
-  /* Copy parent's SYSTEM and CODE to child. */
   page_table_entry *parent_PT = get_PT(current());
-  for (pag=0; pag<NUM_PAG_KERNEL; pag++)
-  {
-    set_ss_pag(process_PT, pag, get_frame(parent_PT, pag));
-  }
-  for (pag=0; pag<NUM_PAG_CODE; pag++)
-  {
-    set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
-  }
-  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
-  for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
-  {
-    /* Map one child page to parent's address space. */
-    set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
-    copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
-    del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
-  }
+  int new_ph_pag, pag, i;
   
-  
-  if (current()->screen_buffer != NULL) {
-	new_ph_pag=alloc_frame();
-	int alfredo = get_free_logical_page(parent_PT, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
-    if (new_ph_pag != -1 && alfredo != -1) /* One page allocated */
-    {
-	  set_ss_pag(process_PT, ((int)(current()->screen_buffer))>>12, new_ph_pag);
-      set_ss_pag(parent_PT, alfredo, new_ph_pag);
-      copy_data(current()->screen_buffer, (void*)((alfredo)<<12), 80*25*2);
-      del_ss_pag(parent_PT, alfredo);
-    }
-    else {
-      /* Deallocate allocated pages. Up to pag. */
-      for (i=0; i<pag; i++)
-      {
-        free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
-        del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
-      }
-      /* Deallocate task_struct */
-      list_add_tail(lhcurrent, &freequeue);
-      
-      free_frame(new_ph_pag);
-      
-      /* Return error */
-      return -EAGAIN; 
-    }
-  }
-  
-  /* Deny access to the child's memory space */
-  set_cr3(get_DIR(current()));
+  if (what == 0) {
+	  /* new pages dir */
+	  allocate_DIR((struct task_struct*)uchild);
+	  
+	  /* Allocate pages for DATA+STACK */
+	  for (pag=0; pag<NUM_PAG_DATA; pag++)
+	  {
+		new_ph_pag=alloc_frame();
+		if (new_ph_pag!=-1) /* One page allocated */
+		{
+		  set_ss_pag(process_PT, PAG_LOG_INIT_DATA+pag, new_ph_pag);
+		}
+		else /* No more free pages left. Deallocate everything */
+		{
+		  /* Deallocate allocated pages. Up to pag. */
+		  for (i=0; i<pag; i++)
+		  {
+			free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+			del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+		  }
+		  /* Deallocate task_struct */
+		  list_add_tail(lhcurrent, &freequeue);
+		  
+		  /* Return error */
+		  return -EAGAIN; 
+		}
+	  }
+	
 
-  uchild->task.PID=++global_PID;
-  uchild->task.state=ST_READY;
+	  /* Copy parent's SYSTEM and CODE to child. */
+	  for (pag=0; pag<NUM_PAG_KERNEL; pag++)
+	  {
+		set_ss_pag(process_PT, pag, get_frame(parent_PT, pag));
+	  }
+	  for (pag=0; pag<NUM_PAG_CODE; pag++)
+	  {
+		set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
+	  }
+	  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
+	  for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
+	  {
+		/* Map one child page to parent's address space. */
+		set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
+		copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
+		del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
+	  }
+	  
+	  if (current()->screen_buffer != NULL) {
+		new_ph_pag=alloc_frame();
+		int alfredo = get_free_logical_page(parent_PT, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
+		if (new_ph_pag != -1 && alfredo != -1) /* One page allocated */
+		{
+		  set_ss_pag(process_PT, ((int)(current()->screen_buffer))>>12, new_ph_pag);
+		  set_ss_pag(parent_PT, alfredo, new_ph_pag);
+		  copy_data(current()->screen_buffer, (void*)((alfredo)<<12), 80*25*2);
+		  del_ss_pag(parent_PT, alfredo);
+		}
+		else {
+		  /* Deallocate allocated pages. Up to pag. */
+		  for (i=0; i<pag; i++)
+		  {
+			free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+			del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+		  }
+		  /* Deallocate task_struct */
+		  list_add_tail(lhcurrent, &freequeue);
+		  
+		  free_frame(new_ph_pag);
+		  
+		  /* Return error */
+		  return -EAGAIN; 
+		}
+	  }
+	  
+	  /* Deny access to the child's memory space */
+	  set_cr3(get_DIR(current()));
+	  
+  }
+  else {
+	  /* copy pages dir */
+	  uchild->dir_pages_baseAddr = current()->dir_pages_baseAddr;
+  }
   
-  uchild->task.screen_buffer = NULL;
+
+  uchild->task.TID=++global_TID;
+  if (what == 0) {
+	  uchild->task.PID = ++global_PID;
+	  uchild->task.master = &uchild->task;
+	  uchild->task.num_threads = 1;
+	  INIT_LIST_HEAD(&uchild->task.threads);
+	  //list_add_tail(&uchild->task.threads_list, &uchild->threads); //?
+  }
+  else {
+	  uchild->task.master = &current()->task;
+	  current()->num_threads++;
+	  list_add_tail(&uchild->task.threads_list, &current()->threads);
+	  int required_pags = (stack_size - 1) / 4096 + 1;
+	  /*
+	   * Ens hem quedat aqui,
+	   *  falta fer tema de pila d'usuari (veure on va, overwrite de la del parent, pillar physical pages...)
+	   * falta modificar pila sistema per tornar al context de funcio amb parametre
+	   * falten potser modificar coses del task_struct i altres
+	   * */
+	  for (i = 0; i < required_pags; i++) {
+		  new_ph_pag = alloc_frame();
+		  if (new_pg_pag == -1) {
+			  //free ... 
+		  }
+		  
+		  set_ss_pag(process_PT, 
+	  }
+  }
+  uchild->task.state=ST_READY;
 
   int register_ebp;		/* frame pointer */
   /* Map Parent's ebp to child's stack */
