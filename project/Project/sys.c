@@ -193,6 +193,7 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
     // Asignar un identificador único al thread
     uchild->task.TID = ++global_TID;
     uchild->task.PID = current()->PID; // El PID es el mismo que el del proceso padre
+    uchild->task.priority = current()->priority;
     
     // Vincular el thread al proceso padre
     uchild->task.master = current()->master;
@@ -517,4 +518,40 @@ void* sys_StartScreen(void)
 int sys_threadCreate(void (*function)(void* arg), void* parameter) {
   // Llamar a sys_clone con CLONE_THREAD y un tamaño de pila predeterminado
   return sys_clone(CLONE_THREAD, (void *(*)(void*))function, parameter, 4096);
+}
+
+int sys_SetPriority(int priority)
+{
+  // Validar que la prioridad sea un valor positivo
+  if (priority < 0) return -EINVAL;
+  
+  // Guardar la prioridad antigua
+  int old_priority = current()->priority;
+  
+  // Establecer la nueva prioridad
+  current()->priority = priority;
+  
+  // Si hay algún thread en readyqueue con mayor prioridad,
+  // ceder la CPU inmediatamente (apropiación inmediata)
+  if (!list_empty(&readyqueue)) {
+    struct list_head *l;
+    struct task_struct *t;
+    int highest_priority = -1;
+    
+    // Buscar el thread con mayor prioridad en la cola de ready
+    list_for_each(l, &readyqueue) {
+      t = list_head_to_task_struct(l);
+      if (t->priority > highest_priority) {
+        highest_priority = t->priority;
+      }
+    }
+    
+    // Si hay un thread con mayor prioridad que el actual, ceder CPU
+    if (highest_priority > current()->priority) {
+      update_process_state_rr(current(), &readyqueue);
+      sched_next_rr();
+    }
+  }
+  
+  return old_priority; // Devolver la prioridad anterior
 }

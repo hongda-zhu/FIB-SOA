@@ -18,7 +18,7 @@
  .long sys_pause
  .long sys_StartScreen
  .long sys_clone
- .long sys_ni_syscall
+ .long sys_SetPriority
  .long sys_ni_syscall
  .long sys_gettime
  .long sys_ni_syscall

@@ -182,3 +182,20 @@ ENTRY(threadExit)
 	ret
 
 
+/* int SetPriority(int priority) */
+ENTRY(SetPriority)
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ebx
+    
+    movl $8, %eax     // Número de syscall (el asignado en la tabla)
+    movl 0x8(%ebp), %ebx   // priority
+    
+    call syscall_sysenter
+    
+    popl %ebx
+    test %eax, %eax
+    js nok
+    
+    popl %ebp
+    ret

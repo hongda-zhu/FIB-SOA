@@ -109,42 +109,70 @@ int needs_sched_rr(void)
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 {
-  if (t->state!=ST_RUN) list_del(&(t->list));
-  if (dst_queue!=NULL)
-  {
+  if (t->state != ST_RUN) list_del(&(t->list));
+  
+  if (dst_queue != NULL) {
     list_add_tail(&(t->list), dst_queue);
-    if (dst_queue!=&readyqueue) t->state=ST_BLOCKED;
-    else
-    {
+    
+    if (dst_queue != &readyqueue) {
+      t->state = ST_BLOCKED;
+    }
+    else {
       update_stats(&(t->p_stats.system_ticks), &(t->p_stats.elapsed_total_ticks));
-      t->state=ST_READY;
+      t->state = ST_READY;
+      
+      // Comprobar si este thread recién añadido a ready tiene mayor prioridad
+      // que el thread actualmente en ejecución
+      if (t->priority > current()->priority && t != current()) {
+        // Forzar un cambio de contexto
+        sched_next_rr();
+      }
     }
   }
-  else t->state=ST_RUN;
+  else {
+    t->state = ST_RUN;
+  }
 }
 
 void sched_next_rr(void)
 {
   struct list_head *e;
-  struct task_struct *t;
+  struct task_struct *t, *best_task = NULL;
+  int max_priority = -1;
 
   if (!list_empty(&readyqueue)) {
-	e = list_first(&readyqueue);
-    list_del(e);
-
-    t=list_head_to_task_struct(e);
+    // Buscar el thread con mayor prioridad
+    list_for_each(e, &readyqueue) {
+      t = list_head_to_task_struct(e);
+      if (t->priority > max_priority) {
+        max_priority = t->priority;
+        best_task = t;
+      }
+    }
+    
+    if (best_task) {
+      // Eliminar de la cola
+      list_del(&best_task->list);
+    } else {
+      // Si no encontramos ninguno (todos tienen prioridad -1), 
+      // coger el primero (comportamiento original)
+      e = list_first(&readyqueue);
+      list_del(e);
+      best_task = list_head_to_task_struct(e);
+    }
   }
-  else
-    t=idle_task;
+  else {
+    best_task = idle_task;
+  }
 
-  t->state=ST_RUN;
-  remaining_quantum=get_quantum(t);
+  best_task->state = ST_RUN;
+  remaining_quantum = get_quantum(best_task);
 
   update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
-  update_stats(&(t->p_stats.ready_ticks), &(t->p_stats.elapsed_total_ticks));
-  t->p_stats.total_trans++;
+  update_stats(&(best_task->p_stats.ready_ticks), &(best_task->p_stats.elapsed_total_ticks));
+  best_task->p_stats.total_trans++;
 
-  task_switch((union task_union*)t);
+  task_switch((union task_union*)best_task);
 }
 
 void schedule()

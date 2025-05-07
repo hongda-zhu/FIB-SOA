@@ -17,11 +17,11 @@ Register    idtR;
 char char_map[] =
 {
   '\0','\0','1','2','3','4','5','6',
-  '7','8','9','0','\'','¡','\0','\0',
+  '7','8','9','0','\'','ï¿½','\0','\0',
   'q','w','e','r','t','y','u','i',
   'o','p','`','+','\0','\0','a','s',
-  'd','f','g','h','j','k','l','ñ',
-  '\0','º','\0','ç','z','x','c','v',
+  'd','f','g','h','j','k','l','ï¿½',
+  '\0','ï¿½','\0','ï¿½','z','x','c','v',
   'b','n','m',',','.','-','\0','*',
   '\0','\0','\0','\0','\0','\0','\0','\0',
   '\0','\0','\0','\0','\0','\0','\0','7',
@@ -44,17 +44,33 @@ void clock_routine()
   zeos_ticks ++;
   
   if (current()->screen_buffer != NULL) {
-	  copy_data(current()->screen_buffer, (void*)0xB8000, 80*25*2); //80x25 screen, each pixel occupies 2 bytes. screen buffer at 0xB8000
+    copy_data(current()->screen_buffer, (void*)0xB8000, 80*25*2);
   }
   
-  //unpause processes
-  struct list_head * e;
-  struct list_head * e_temp;
-  list_for_each_safe( e, e_temp, &blocked ) {
-	struct task_struct * proc = list_head_to_task_struct(e);
-	if (proc->unpause_tick > 0 && proc->unpause_tick <= get_ticks()) {
-		update_process_state_rr(proc, &readyqueue);
-	}
+  // Necesario para gestionar prioridades
+  int highest_priority = current()->priority;
+  struct task_struct *highest_priority_task = NULL;
+  
+  struct list_head *e;
+  struct list_head *e_temp;
+  list_for_each_safe(e, e_temp, &blocked) {
+    struct task_struct *proc = list_head_to_task_struct(e);
+    if (proc->unpause_tick > 0 && proc->unpause_tick <= get_ticks()) {
+      update_process_state_rr(proc, &readyqueue);
+      
+      // Comprobar si tiene mayor prioridad que el proceso actual
+      if (proc->priority > highest_priority) {
+        highest_priority = proc->priority;
+        highest_priority_task = proc;
+      }
+    }
+  }
+  
+  // Si hay un thread desbloqueado con mayor prioridad, forzar cambio de contexto
+  if (highest_priority_task != NULL) {
+    update_process_state_rr(current(), &readyqueue);
+    sched_next_rr();
+    return;  // Terminamos porque ya se ha hecho un cambio de contexto
   }
   
   schedule();

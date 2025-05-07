@@ -44,5 +44,7 @@ int get_keyboard_state(char* keyboard);
 
 int pause(int milliseconds);
 
+int SetPriority(int priority); 
+
 void* StartScreen(void);
 #endif  /* __LIBC_H__ */
