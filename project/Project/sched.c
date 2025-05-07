@@ -198,6 +198,8 @@ void init_idle (void)
   
   c->screen_buffer = NULL;
 
+  c->priority = -1;
+
   init_stats(&c->p_stats);
 
   allocate_DIR(c);
@@ -226,6 +228,8 @@ void init_task1(void)
   c->state=ST_RUN;
   
   c->screen_buffer = NULL;
+
+  c->priority = 0;
 
   remaining_quantum=c->total_quantum;
 
