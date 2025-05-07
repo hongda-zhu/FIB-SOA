@@ -102,22 +102,35 @@ void update_sched_data_rr(void)
 
 int needs_sched_rr(void)
 {
-  if ((remaining_quantum==0)&&(!list_empty(&readyqueue))) return 1;
+	struct list_head *e;
+	struct task_struct *t;
+	int has_higher_prio = 0;
+	if (!list_empty(&readyqueue)) {
+		list_for_each(e, &readyqueue) {
+			t = list_head_to_task_struct(e);
+			if (t->priority >= current()->priority) {
+				has_higher_prio = 1;
+				break;
+			}
+		}
+	}
+  if ((remaining_quantum==0) && has_higher_prio) return 1;
   if (remaining_quantum==0) remaining_quantum=get_quantum(current());
   return 0;
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 {
-  if (t->state!=ST_RUN) list_del(&(t->list));
-  if (dst_queue!=NULL)
+  if (t->state != ST_RUN) list_del(&(t->list));
+  if (dst_queue != NULL)
   {
     list_add_tail(&(t->list), dst_queue);
-    if (dst_queue!=&readyqueue) t->state=ST_BLOCKED;
+    if (dst_queue != &readyqueue) t->state=ST_BLOCKED;
     else
     {
       update_stats(&(t->p_stats.system_ticks), &(t->p_stats.elapsed_total_ticks));
-      t->state=ST_READY;
+      t->state = ST_READY;
+      if (t->priority > current()->priority && t != current()) sched_next_rr();
     }
   }
   else t->state=ST_RUN;
@@ -126,25 +139,38 @@ void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 void sched_next_rr(void)
 {
   struct list_head *e;
-  struct task_struct *t;
+  struct task_struct *t, *best_task = NULL;
+  int best_prio = -1;
 
   if (!list_empty(&readyqueue)) {
-	e = list_first(&readyqueue);
-    list_del(e);
-
-    t=list_head_to_task_struct(e);
+	list_for_each(e, &readyqueue) {
+		t = list_head_to_task_struct(e);
+		if (t->priority > best_prio) {
+			best_prio = t->priority;
+			best_task = t;
+		}
+	}
+	
+	if (best_task) {
+		list_del(&best_task->list);
+	}
+	else {
+		e = list_first(&readyqueue);
+		best_task = list_head_to_task_struct(e);
+		list_del(e);
+	}
   }
   else
-    t=idle_task;
-
-  t->state=ST_RUN;
-  remaining_quantum=get_quantum(t);
+    best_task = idle_task;
+    
+  best_task->state = ST_RUN;
+  remaining_quantum = get_quantum(best_task);
 
   update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
-  update_stats(&(t->p_stats.ready_ticks), &(t->p_stats.elapsed_total_ticks));
-  t->p_stats.total_trans++;
+  update_stats(&(best_task->p_stats.ready_ticks), &(best_task->p_stats.elapsed_total_ticks));
+  best_task->p_stats.total_trans++;
 
-  task_switch((union task_union*)t);
+  task_switch((union task_union*)best_task);
 }
 
 void schedule()
@@ -169,6 +195,8 @@ void init_idle (void)
   c->total_quantum=DEFAULT_QUANTUM;
   
   c->screen_buffer = NULL;
+  
+  c->priority = -1;
 
   init_stats(&c->p_stats);
 
@@ -190,6 +218,8 @@ void init_task1(void)
   list_del(l);
   struct task_struct *c = list_head_to_task_struct(l);
   union task_union *uc = (union task_union*)c;
+  
+  INIT_LIST_HEAD(&c->threads);
 
   c->PID=1;
 
@@ -198,6 +228,8 @@ void init_task1(void)
   c->state=ST_RUN;
   
   c->screen_buffer = NULL;
+  
+  c->priority = 0;
 
   remaining_quantum=c->total_quantum;
 

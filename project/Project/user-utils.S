@@ -75,13 +75,21 @@ ENTRY(fork)
 	popl %ebp
 	ret
 
-/* int clone(int what, void *(*func)(void*), void *param, int stack_size) */
-ENTRY(clone)
+/* int pthread_create(void *(*func)(void*), void *param, int stack_size) */
+ENTRY(pthread_create)
 	pushl %ebp
 	movl %esp, %ebp
+	pushl %ebx;  // Save EBX, ESI and EDI if modified
+	pushl %esi
 	movl $7, %eax
-	movl 0x8(%ebp), %ebx;	//what
+	movl $1, %ebx;	//what
+	movl 0x8(%ebp), %ecx; //*func
+	movl 0xC(%ebp), %edx; //*param
+	movl 0x10(%ebp), %esi; //stack_size
 	call syscall_sysenter
+	call syscall_sysenter
+	popl %esi
+	popl %ebx
 	test %eax, %eax
 	js nok	// if (eax < 0) -> 
 	popl %ebp
@@ -127,6 +135,20 @@ ENTRY(GetKeyboardState)
 	pushl %ebx;  // Save EBX, ESI and EDI if modified
 	movl $3, %eax
 	movl 0x8(%ebp), %ebx;	//*keyboard
+	call syscall_sysenter
+	popl %ebx
+	test %eax, %eax
+	js nok	// if (eax < 0) -->
+	popl %ebp
+	ret
+
+/* int SetPriority(int priority) */
+ENTRY(SetPriority)
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %ebx;  // Save EBX, ESI and EDI if modified
+	movl $2, %eax
+	movl 0x8(%ebp), %ebx;	//priority
 	call syscall_sysenter
 	popl %ebx
 	test %eax, %eax

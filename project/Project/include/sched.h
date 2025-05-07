@@ -29,12 +29,13 @@ struct task_struct {
   void* screen_buffer; /* Start of the screen buffer (logic address)*/
   
   int TID; /* Thread ID */
-  void* user_stack_sp;
+  int user_stack_page_start;
+  int user_stack_page_end;
   int priority;
-  struct list_head threads_list; 
-  struct task_struct* master;
+  struct list_head threads_list; /* enqueueing */
+  struct task_struct* master; 
   int num_threads;
-  struct list_head threads;
+  struct list_head threads; /* actual list when thread is master */
 };
 
 union task_union {

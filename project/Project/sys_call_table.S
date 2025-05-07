@@ -4,7 +4,7 @@
 ENTRY (sys_call_table)
 	.long sys_ni_syscall	//0
 	.long sys_exit		//1
-	.long sys_ni_syscall		//2
+	.long sys_SetPriority		//2
 	.long sys_GetKeyboardState	//3
 	.long sys_write		//4
 	.long sys_pause	//5

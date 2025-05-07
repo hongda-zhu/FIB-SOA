@@ -22,7 +22,9 @@ int getpid();
 
 int fork();
 
-int clone(int what, void *(*func)(void*), void *param, int stack_size);
+int pthread_create(void *(*func)(void*), void *param, int stack_size);
+
+int SetPriority(int priority);
 
 void exit();
 
