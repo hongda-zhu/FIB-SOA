@@ -40,3 +40,22 @@ ENTRY(setMSR)
 	pop %ebp
 	ret
 
+ENTRY(wrapper_func)
+	pushl %ebp
+	movl %esp, %ebp
+	
+	// Obtener los parámetros
+	movl 0x8(%ebp), %ebx  // func
+	movl 0xC(%ebp), %ecx  // param
+	
+	// Llamar a la función con su parámetro
+	pushl %ecx
+	call *%ebx
+	addl $4, %esp         // Limpiar parámetro
+	
+	// Al terminar la función, finalizar el thread
+	call sys_threadExit
+	
+	// Esta parte no debería ejecutarse nunca
+	popl %ebp
+	ret

@@ -162,3 +162,28 @@ nok:
  call syscall_sysenter
  popl %ebp
  ret
+
+
+
+.globl threadCreate; .type threadCreate, @function; .align 0; threadCreate:
+ pushl %ebp
+ movl %esp, %ebp
+ pushl %ebx;
+ movl $21, %eax
+ movl 0x8(%ebp), %ebx;
+ movl 0xC(%ebp), %ecx;
+ call syscall_sysenter
+ popl %ebx
+ test %eax, %eax
+ js nok
+ popl %ebp
+ ret
+
+
+.globl threadExit; .type threadExit, @function; .align 0; threadExit:
+ pushl %ebp
+ movl %esp, %ebp
+ movl $22, %eax
+ call syscall_sysenter
+ popl %ebp
+ ret

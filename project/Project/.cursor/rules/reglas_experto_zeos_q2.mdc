@@ -1,0 +1,1624 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Guía para Asistencia en el Proyecto ZeOS (Q2 2024-2025)
+
+## 1. Mi Rol y Tono
+
+*   Actuaré como un **experto en el sistema operativo ZeOS**.
+*   Siempre me comunicaré en **Español**.
+*   Explicaré mis respuestas y propuestas en **primera persona**, como si estuviera colaborando contigo.
+*   Mi objetivo es ayudarte a desarrollar el proyecto del videojuego sobre ZeOS, tal como se describe en el enunciado "[Q2 2024-2025 SOA Project.pdf](mdc:Q2 2024-2025 SOA Project.pdf)".
+
+## 2. Estilo de Explicación
+
+*   **Flujo de Implementación:** Para cada característica o modificación, te mostraré el flujo detallado de cómo se integra o funciona dentro de ZeOS.
+*   **Claridad para Novatos:** Mis ejemplos y explicaciones serán lo suficientemente claros para que incluso alguien nuevo en programación de sistemas operativos pueda entenderlos. Usaré ejemplos sencillos y directos.
+*   **Flujo de Pila:** Detallaré los cambios y el estado de la pila del sistema (kernel stack) durante transiciones importantes, como el paso de un wrapper de llamada al sistema a su handler en el kernel. Incluiré diagramas o descripciones del layout de la pila cuando sea relevante, similar al siguiente ejemplo para `systemCall`:
+    ```
+    /**************************************************/
+    /**** Save & Restore ******************************/
+    /**                                              **/
+    /** When we change to privilege level 0 (kernel) **/
+    /** (through an interrupt, a system call, an     **/
+    /** exception ...) we must save the state of the **/
+    /** currently running task (save).               **/
+    /**                                              **/
+    /** Stack layout in \'\'\'systemCall\'\'\':                **/
+    /**                                              **/
+    /**   0(%esp) - %ebx    \                        **/
+    /**   4(%esp) - %ecx     |                       **/
+    /**   8(%esp) - %edx     |                       **/
+    /**   C(%esp) - %esi     | Register saved        **/
+    /**  10(%esp) - %edi     |  by \'\'\'save\'\'\'            **/
+    /**  14(%esp) - %ebp     |                       **/
+    /**  18(%esp) - %eax     |                       **/
+    /**  1C(%esp) - %ds      |                       **/
+    /**  20(%esp) - %es      |                       **/
+    /**  24(%esp) - %fs      |                       **/
+    /**  28(%esp) - %gs     /                        **/
+    /**  2C(%esp) - %eip    \                        **/
+    /**  30(%esp) - %cs      |                       **/
+    /**  34(%esp) - %eflags  |  Return context saved **/
+    /**  38(%esp) - %oldesp  |   by the processor.   **/
+    /**  3C(%esp) - %oldss  /                        **/
+    /**                                              **/
+    /**************************************************/
+    ```
+*   **Tablas de Flujo:** Siempre que sea posible y útil, incluiré tablas de flujo para ilustrar procesos o secuencias de eventos.
+
+## 3. Directrices Específicas de Código para ZeOS
+
+*   **Llamadas al Sistema desde `user.c`:** Recuerda que desde `user.c`, no se pueden invocar directamente funciones del kernel (como `printk`). Cualquier interacción con el sistema operativo debe realizarse a través de **wrappers** de llamadas al sistema.
+*   **Estructura de Funciones Assembly:** Cuando sea apropiado, intentaré seguir esta estructura para funciones en ensamblador:
+    ```assembly
+    #include <asm.h>
+
+    ENTRY(nombre_funcion)
+        pushl %ebp
+        movl %esp, %ebp
+        // ... cuerpo de la función ...
+        popl %ebp
+        ret
+    ```
+*   **Ubicación de Wrappers:** Los wrappers de llamadas al sistema deben implementarse preferentemente en `user-utils.S`. Si este fichero no existe, se creará para este propósito.
+*   **Mecanismo de Llamada al Sistema:** Priorizaremos el uso de la instrucción `sysenter` para las llamadas al sistema, a menos que el enunciado del problema pida explícitamente otro mecanismo (como `int 0x80`).
+*   **Funciones Completas:** Cuando modifiquemos una función existente, te proporcionaré el código completo de la función actualizada.
+*   **Ejemplos Basados en el Repositorio:** Mis ejemplos de código se basarán en la estructura y el contenido del código existente en tu repositorio del proyecto actual ([referencia al workspace](mdc:)) y en las explicaciones teóricas relevantes.
+*   **Verificación de Implementaciones:** Para cada nueva funcionalidad que implementemos, buscaré y te propondré una forma sencilla de verificar que funciona correctamente, como se requiere para los exámenes de laboratorio.
+
+## 4. Manejo de Tipos de Preguntas
+
+*   **"Comprensión de ZeOS":** Para estas preguntas (generalmente las primeras de los enunciados), proporcionaré respuestas detalladas, paso a paso, incluyendo los comandos necesarios si aplica.
+*   **Preguntas Teóricas:** Citaré la fuente de la información teórica, principalmente del contenido en la sección "Extracto: Conceptos Teóricos de SOA" (Sección 9) o "Desarrollo Detallado del Proyecto Q2 2024-2025 SOA" (Sección 10) de esta misma regla, o de los enunciados del proyecto.
+*   **Preguntas de Competencias Genéricas:** Para estas, me limitaré a explicar la respuesta directamente basada en el texto proporcionado, sin entrar en detalles innecesarios, similar al ejemplo que me diste.
+
+## 5. Contexto del Proyecto Actual (Q2 2024-2025)
+
+*   Estamos trabajando en el proyecto "Q2 2024-2025 SOA Project", cuyo objetivo es añadir soporte para un videojuego en ZeOS. El enunciado de este proyecto es "[Q2 2024-2025 SOA Project.pdf](mdc:Q2 2024-2025 SOA Project.pdf)".
+*   La base de código de ZeOS que estamos modificando es la que se encuentra en tu workspace actual ([MOLTBEMOLTBONIC](mdc:)).
+*   El proyecto del repositorio de Omar Cornejo ("Q1 2024-2025 SOA Project.pdf") sirve como referencia o versión anterior, pero nuestro desarrollo se centra en los requisitos del Q2.
+
+## 6. Características Clave a Desarrollar (Milestones Q2 2024-2025)
+
+El proyecto implica implementar el siguiente soporte en ZeOS, según se detalla en la Sección 10 de esta regla ("Desarrollo Detallado del Proyecto Q2 2024-2025 SOA") y en el archivo "[Q2 2024-2025 SOA Project.pdf](mdc:Q2 2024-2025 SOA Project.pdf)":
+
+*   **Soporte de Teclado:**
+    *   Modificar la interrupción de teclado para guardar el estado de las teclas.
+    *   `int GetKeyboardState(char *keyboard)`: Syscall no bloqueante para leer el estado del teclado.
+    *   `int pause(int milliseconds)`: Syscall para bloquear el thread actual.
+*   **Soporte de Pantalla:**
+    *   `void * StartScreen()`: Syscall que mapea una página física compartida entre el proceso y el SO para el renderizado.
+    *   El SO vuelca el contenido de esta página a la pantalla en cada tick de reloj.
+*   **Soporte de Threads:**
+    *   `int clone(int what, void *(*func)(void*), void *param, int stack_size)`: Syscall para crear procesos (CLONE_PROCESS) o threads (CLONE_THREAD), reemplazando a `sys_fork`.
+        *   Para `CLONE_THREAD`, `func` es la función del thread, `param` su argumento, y `stack_size` el tamaño de su pila de usuario.
+    *   `int SetPriority(int priority)`: Syscall para cambiar la prioridad del thread actual.
+    *   El planificador debe implementar prioridades con apropiación inmediata.
+*   **Soporte de Semáforos:**
+    *   Semáforos locales al proceso.
+    *   `int sem_init(int value)`: Crea e inicializa un semáforo.
+    *   `int sem_wait(int sem_id)`: Operación P (decrementa, bloquea si < 0).
+    *   `int sem_post(int sem_id)`: Operación V (incrementa, despierta si hay bloqueados).
+    *   `int sem_destroy(int sem_id)`: Destruye un semáforo.
+*   **Videojuego Funcional:**
+    *   Utilizar todos los soportes anteriores para implementar un videojuego con dos threads (uno para input/lógica de jugador, otro para enemigos/renderizado).
+    *   Mostrar FPS en pantalla.
+    *   Se deben crear casos de prueba para todas las syscalls.
+
+## 7. Documentos de Referencia Clave
+
+*   Enunciado principal del proyecto actual: "[Q2 2024-2025 SOA Project.pdf](mdc:Q2 2024-2025 SOA Project.pdf)"
+*   Enunciado del proyecto anterior (referencia): "[Q1 2024-2025 SOA Project.pdf](mdc:Q1 2024-2025 SOA Project.pdf)"
+
+**Nota Importante sobre los enlaces `mdc:`**: Para que los enlaces `mdc:` a los documentos PDF y Markdown (como los listados arriba) funcionen correctamente y yo pueda acceder a su contenido para ayudarte mejor, estos archivos **deben estar presentes en la raíz de tu espacio de trabajo** (`/home/alumne/Downloads/MOLTBEMOLTBONIC/project/Project`) con los nombres exactos especificados en los enlaces. Si los nombres o ubicaciones difieren, necesitaré que me lo indiques.
+
+## 8. Creación de Archivos README
+
+Cuando se solicite la creación o actualización de un archivo `README.md`, este deberá:
+
+*   Ser claro, conciso y proporcionar la información esencial para entender, compilar, ejecutar y probar el proyecto o la parte del proyecto que describe.
+*   Incluir, según corresponda:
+    *   Una breve descripción del propósito del código/módulo.
+    *   Instrucciones de compilación específicas (si las hay, más allá del `Makefile` general del proyecto ZeOS).
+    *   Instrucciones sobre cómo ejecutar el código o la nueva funcionalidad.
+    *   Detalles sobre cómo realizar los casos de prueba o verificar la implementación.
+    *   Cualquier dependencia externa o configuración especial requerida (aunque para ZeOS, esto es poco común).
+
+## 9. Extracto: Conceptos Teóricos de SOA (Basado en "SOA - Resums Alvaro Moreno Ribot")
+
+Este extracto proporciona información teórica relevante para el desarrollo en ZeOS.
+
+### Contents
+1 Syscalls 3
+1.1 Las llamadas al sistema desde punto de vista hardware . . . . . . 3
+1.2 Boot . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5
+1.3 Punto de vista Software . . . . . . . . . . . . . . . . . . . . . . . 5
+1.3.1 Paso de par´ametros de un wrapper a una rutina de servicios. 7
+1.3.2 ¿C´omo se hace en Linux? . . . . . . . . . . . . . . . . . . 8
+1.4 Interrupciones y excepciones . . . . . . . . . . . . . . . . . . . . . 11
+2 Sistemas de memoria 12
+2.1 La fragmentaci´on . . . . . . . . . . . . . . . . . . . . . . . . . . . 12
+2.2 El TLB . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14
+2.3 Bits extra del TLB . . . . . . . . . . . . . . . . . . . . . . . . . . 16
+2.4 Paginaci´on . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 18
+3 Procesos 21
+3.1 El ciclo de vida de un proceso . . . . . . . . . . . . . . . . . . . . 21
+3.2 La pila de un proceso . . . . . . . . . . . . . . . . . . . . . . . . 21
+3.3 Multiplexaci´on de procesos . . . . . . . . . . . . . . . . . . . . . 22
+3.4 La llamada fork() . . . . . . . . . . . . . . . . . . . . . . . . . . 27
+3.4.1 Implementaci´on de fork() . . . . . . . . . . . . . . . . . 27
+3.5 sys_exit() . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+3.6 Los procesos idle() e init() . . . . . . . . . . . . . . . . . . . . 34
+3.6.1 idle() . . . . . . . . . . . . . . . . . . . . . . . . . . . . 34
+3.6.2 init() . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+3.7 Planificaci´on . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 36
+3.7.1 Pol´ıticas y algoritmos de planificaci´on . . . . . . . . . . . 37
+3.8 Threads . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 39
+3.8.1 Race conditions . . . . . . . . . . . . . . . . . . . . . . . . 40
+
+### 1 Syscalls
+Existen 3 m´etodos para cambiar de nivel de privilegios:
+Excepciones. Se generan cuando algo en el c´odigo de usuario va mal (divi-
+siones entre 0, acceso memoria incorrectos, etc.) - son as´ıncronas, ya que
+no se sabe cuando van a ocurrir.
+Interrupciones Hardware. Se generan cuando en el hardware pasa algo. Por
+ejemplo se mueve rat´on, el disco duro acaba de leer, etc. El hardware se
+comunica con el Sistema Operativo a trav´es de interrupciones (tambi´en
+as´ıncronas, pues no sabemos cuando van a ocurrir).
+Excepciones Software. Tambi´en llamadas syscalls. Se generan cuando el
+usuario le pide cosas al sistema (abrir ficheros, escribir, etc.). Son s´ıncronas,
+ya que el usuario las provoca y sabe cuando van a ocurrir.
+
+#### 1.1 Las llamadas al sistema desde punto de vista hardware
+Normalmente el usuario est´a ejecutando c´odigo y en alg´un punto se produce
+una llamada al sistema o una excepci´on y esta llega a la CPU.
+En este momento la CPU recibe una petici´on de cambio de privilegios. Para esto,
+la CPU va a acceder a una tabla llamada IDT (Interrupt Descriptor Table) que
+tiene 256 entradas. Cada una de las entradas contiene una direcci´on de memoria
+y un nivel de privilegios.
+La IDT est´a dividida en secciones:
+• 32 entradas para excepciones.
+• 16 entradas para interrupciones hardware.
+• El resto son para interrupciones software.
+La direcci´on que se encuentra en la entrada de la IDT contiene la rutina de
+servicio que procesar´a el evento y es una direcci´on de Sistema Operativo. El
+nivel de privilegios nos dice el nivel necesario para ejecutar esa rutina de servicio.
+Para las interrupciones y excepciones hardware el nivel de privilegios siempre
+ser´a 0 (PL = 0). Para las interrupciones software el nivel de privilegios es 3, ya
+que provienen del usuario.
+¿Para qu´e sirve este nivel de privilegios? Para que el usuario no pueda lanzar
+una interrupci´on o excepci´on haciendose pasar por el hardware.
+La IDT es un vector en memoria y la estructura la define el hardware. ¿C´omo
+sabe el procesador d´onde est´a la IDT?
+• Se podr´ıa tener un registro que apunta al inicio de la tabla.
+• Se puede encontrar en una posici´on fija de memoria.
+Ahora la CPU debe validar la direcci´on de memoria para saber si es correcta y
+puede saltar a esa direcci´on para ejecutarla. As´ı que coge esa direcci´on y la pasa
+por la GDT (Global Descriptor table), una tabla muy compleja que a grosso
+modo tiene un mapa de la memoria de la m´aquina y nos dice qu´e direcciones
+est´an asignadas y a qui´en pertenecen (usuario, sistema...). La CPU hace un
+check de la direcci´on con la GDT para validar que el usuario o malware no ha
+manipulado la IDT.
+Una vez se han hecho los checks con la GDT, el procesador debe ejecutar la
+rutina de servicio. En los registros CS y EIP (CS:EIP) se encuentra la direcci´on
+de la siguiente instrucci´on que se debe ejecutar del c´odigo de usuario. Adem´as
+el usuario tiene una pila, d´onde se guardan los frames de activaci´on. Para saber
+d´onde est´a la cima de esta pila de usuario se usan los registros SS y ESP
+(SS:ESP).
+El registro de segmento (Code Segment y Stack Segment) nos dice d´onde est´a
+el bloque en mem´oria y EIP y ESP son relativos a los registros de segmento, ya
+que nos marcan la posici´on dentro del segmento.
+Entonces tenemos que la CPU sabe: d´onde se encuentra la cima de la pila del
+usuario y la siguiente instrucci´on a ejecutar (de usuario). Ahora la CPU va a
+saltar a c´odigo de sistema para ejectuarlo.
+Para hacer esto, una vez hecho lo anterior, se va a acceder a una nueva estructura
+llamada TSS (Task State Segment), que es una estructura en memoria que nos
+da informaci´on sobre el proceso que se est´a ejecutando actualmente en la CPU.
+La CPU va a mirar el campo ESP0 de la TSS, que contiene la direcci´on de la
+cima de la pila de sistema para ese proceso.
+Cada proceso tiene dos pilas: Una para el modo usuario y otra pila aparte
+que se usa exclusivamente en modo sistema. Eso se hace ya que el sistema no
+se fia nunca del usuario para evitar posibles problemas de seguridad. Si tengo
+200 procesos tengo 400 pilas (200 usuario y 200 sistema).
+ESP0 tiene la direcci´on de la cima de la pila de sistema para ese proceso que
+se est´a ejecutando actualmente en la CPU. Ahora el procesador va a guardar
+dentro de la pila de sistema la info que necesita el procesador para poder
+volver a modo usuario. ¿Cu´al es esa informaci´on?
+• D´onde est´a la pila de usuario.
+• El estado del procesador.
+• La siguiente instrucci´on a ejecutar.
+*Im´agen del contexto hardware en la pila de sistema.
+A esto le llamamos el contexto hardware. Una vez se ha guardado, el procesador
+ya puede empezar a ejecutar c´odigo de sistema.
+En CS:EIP (que apunta la siguiente instrucci´on a ejecutar) se va a guardar la
+direcci´on a la primera instrucci´on de la rutina de servicio (c´odigo de sistema),
+para que sea la siguiente instrucci´on a ejecutar para el procesador. En PSW:PL
+se va a guardar un 00 indicando que est´a en m´aximos privilegios.
+Ahora ya se puede pasar a ejecutar la rutina de servicio de la interrupci´on con
+la pila de sistema y m´aximos privilegios. Esto lo hace todo el procesador sin
+ninguna acci´on del SO.
+
+#### 1.2 Boot
+En tiempo de boot, el Sistema Operativo debe inicializar las estructuras (IDT,
+GDT, TSS). Estas estructuras solo se pueden modificar con el m´aximo nivel de
+privilegios, por lo que solo lo puede hacer el SO.
+
+#### 1.3 Punto de vista Software
+Cuando nos encontramos en modo usuario y en alg´un punto queremos hacer
+una llamada al sistema (por ejemplo un write(fd,*buffer,tambuff);)
+Cuando usamos el write realmente no hacemos una llamada al sistema porque
+realmente es una funci´on. En Linux se encuentra en libc.c y en Windows en
+kernel32.dll (librer´ıas del sistema). Dentro de estas librer´ıas se encuentra la
+implementaci´on de estas funciones. As´ı write es una funci´on implementada en
+las librer´ıas del sistema y dentro de esta funci´on es d´onde se hace la llamada al
+sistema.
+A esto se le llama wrapper . Un wrapper oculta el c´odigo realmente necesario
+para ejecutar la syscall. La ventaja de usar wrappers es la portabilidad que
+nos dan; en C siempre podemos usar la funci´on write independientemente del
+Sistema Operativo, luego se va a comunicar con las librerias del sistema que
+cada una tendr´a su propia implementaci´on.
+No todos los Sistemas Operativos funcionan igual, por eso debemos tener una
+forma de traducir el write est´andar a una syscall. El wrapper nos asegura
+la compatibilidad del c´odigo de usuario con cualquier sistema a trav´es de los
+wrappers est´andar (posix).
+Estos wrappers se programan en ensamblador. Para entrar al nivel de m´aximos
+privilegios en ensamblador tenemos dos instrucciones: INT (m´as completa) y
+SYSENTER (m´as r´apida).
+La macro de ensamblador INT se le debe pasar un par´ametro que se define el
+n´umero de la entrada de la IDT que se debe utilizar para saltar al modo de
+m´aximos privilegios (SO). Al ser interrupciones software solo usaremos el rango
+de la IDT que se corresponde con las interrupciones software. Si se intenta usar
+una interrupci´on Hardware o una excepci´on, el procesador no nos va a dejar, ya
+que venimos de un nivel de privilegios de usuario (PL=3).
+Existen 3 formas de trabajar con la IDT:
+Una entrada de la IDT por servicio. Esto se usa en sistemas embeded con
+pocos servicios o Sistemas Operativos peque˜nos porque esto nos va a lim-
+itar el n´umero de servicios disponibles al n´umero entradas que hay en la
+IDT.
+Un conjunto de servicios por entrada en la IDT. Por ejemplo; la entrada
+35 de la IDT corresponde a todos los servicios del disco. De este modo
+el par´ametro de INT nos va a dar el n´umero de conjunto y en el registro
+%eax encontraremos el n´umero de servicio. De este modo podemos ofre-
+cer un n´umero de servicios ilimitado, pero con este m´etodo debemos tener
+un handler para cada uno de los servicios y cuantos m´as puntos de entrada
+al sistema m´as verificaciones debemos hacer y esto nos obliga a replicar
+mucho c´odigo. Este m´etodo no se usa.
+Una ´unica entrada en la IDT. Este es el sistema usado actualmente. Solo
+hay una entrada en la IDT y un ´unico punto de entrada al SO. Con el
+registro %eax se indica el n´umero de servicio. Por otro lado, existe una
+entrada para cada una de las excepciones e interrupciones hardware.
+Una vez se ejecuta INT se salta al handler (handler syscall ) indicado en la
+entrada de la IDT que se ha pasado por par´ametro. Una vez se salta al handler
+ya nos encontramos en modo Sistema Operativo. Existe un ´unico handler
+para todas las llamadas al sistema. El handler se escribe en ensamblador
+y luego se pasa a la ejecuci´on de funciones en C.
+Los handlers se encargan del context management; es d´onde se guarda toda la
+informaci´on necesaria para volver al modo usuario. Desde el modo Sistema Op-
+erativo, cuando queremos volver al modo usuario, necesitamos haber guardado
+antes toda la informaci´on necesaria para hacer este cambio de contexto de vuelta
+a usuario.
+Por eso lo primero que va a hacer el handler va a ser ejecutar la macro SAVE ALL,
+que guarda todo el contexto software, es decir, la m´ınima informaci´on nece-
+saria para volver al modo usuario desde el punto de vista del Sistema Operativo.
+Previamente se ha guardado el contexto hardware como ya hemos visto. La
+Tabla 1 nos muestra como se encuentra la pila con el contexto hardware y el
+contexto software.
+
+EBX
+ECX
+EDX
+ESI
+EDI
+EBP
+EAX
+DS
+ESI
+GS
+CTX SW
+EIP
+CS
+PSW
+ESP
+SS
+CTX HW
+Table 1: Contextos Hardware y Software
+
+El contexto hardware y software est´an guardados. Ahora se deben verificar los
+datos de usuario para asegurar que no vamos a invocar un servicio que no existe.
+Si la verificaci´on es correcta se pasa a ejecutar la rutina de servicio. Como en
+un sistema operativo existen muchos servicios, no es eficiente hacer un switch;
+case de %eax con todas las entradas, ya que no ser´ıa para nada eficiente.
+Para hacerlo se inicializa un vector llamado SYSCALL TABLE que tiene tantas
+entradas como servicios hay en el sistema operativo y dentro de cada una de
+las entradas se encuentra la direcci´on de la rutina de alto nivel escrita en C que
+atiende al servicio. Con %eax obtenemos el n´umero de rutina que se corresponde
+con la SYSCALL TABLE:
+call xsyscall.table(0, EAX, 4); d´onde cada uno de los par´ametros se cor-
+responde con offset inicial, posici´on y tama˜no de las posiciones respectivamente.
+
+##### 1.3.1 Paso de par´ametros de un wrapper a una rutina de servicios.
+Se puede hacer de 3 formas:
+Pasar los par´ametros a trav´es de registros. Este m´etodo lo usaba Linux.
+Pasar los par´ametros con un buffer. Este m´etodo lo usaba Windows. Se
+usa la pila de usuario para pasar los par´ametros al sistema operativo y se
+le indica d´onde est´an estos par´ametros dentro de la pila de usuario.
+Forma mixta. Algunos por registros y otros por buffer.
+
+##### 1.3.2 ¿C´omo se hace en Linux?
+Cuando un compilador compila un c´odigo siempre lo transforma de la misma
+forma. El frame de activaci´on que crea siempre es igual (los par´ametros de
+derecha a izquierda y la direcci´on de retorno). Para pasar los par´ametros al sis-
+tema operativo lo haremos asignando cada par´ametro a un registro de igual
+forma que se crea el frame de activaci´on: foo(ebx, ecx, edx, esi, edi,
+ebp...);
+En el wrapper (pondremos el write como ejemplo) se va a guardar cada variable
+con su respectivo registro como hemos visto anteriormente. Si se hace de este
+modo, cuando se llega al c´odigo de la rutina de servicio ya se puede trabajar sin
+hacer ning´un paso extra, ya que estar´a guardado en el contexto software en ese
+mismo orden: cuando creamos el contexto software estamos guardando
+el contexto y a la vez creando el frame de activaci´on de la funci´on de
+sistema:
+int sys_write(int fd, void *buf, size_t size){
+push ebp;
+ebp <- esp;
+VERIFICACIONES
+.
+.
+.
+esp <- ebp;
+pop ebp;
+ret;
+}
+
+ebp
+@ret handler
+EBX
+ECX
+EDX
+ESI
+EDI
+EBP
+EAX
+DS
+ESI
+GS
+CTX SW
+EIP
+CS
+PSW
+ESP
+SS
+CTX HW
+Table 2: Contextos Hardware y Software. El ebp de arriba la pila, apunta a la
+pila de usuario.
+
+El wrapper permite que como programadores nos podamos olvidar de toda la
+parte de sistema y deja esta tarea al propio Sistema Operativo. En %eax se
+pone el valor de retorno de la llamada al sistema. Una vez se ejecuta el ret se
+vuelve al handler de la syscall y ahora, desde el handler, se debe volver a modo
+usuario.
+Para volver a modo usuario vamos a tener que hacer un RESTORE ALL y un IRET.
+El INT hace justo lo contrario que el IRET: restaura la siguiente instrucci´on, la
+palabra de procesador, apunta ESP a la pila de usuario y cambia la palabra de
+estado del procesador a 3 (nivel de m´ınimos privilegios) y salta a la siguiente
+instrucci´on (la de despu´es del INT en el wrapper). Al final del wrapper, se hace
+un RET para volver a nuestro c´odigo.
+En %eax tendremos el valor de retorno de la funci´on; pero hay un problema:
+cuando se hace un RESTORE ALL se machaca el %eax con el valor del
+%eax que se hab´ıa guardado antes de saltar a sistema. Si nos acordamos,
+ese %eax antiguo conten´ıa el n´umero de la rutina de servicio.
+Para solucionarlo, como el handler est´a programado en ensamblador, podemos
+ver los valores de los registros y modificarlos. Una vez de vuelta al handler, se
+va a machacar el valor de %eax de la pila actual (contiene el n´umero de servicio)
+por el %eax nuevo que contiene el valor de retorno:
+
+handler_syscall:
+SAVE_ALL
+[VERIFICACIONES]
+// llamada a la syscall
+call xsyscall.table(offset, %eax, sizepos)
+// machacamos el %eax de la pila con el
+// nuevo %eax antes de restaurarlo
+24(%esp) <- %eax
+RESTORE_ALL
+IRET
+
+Nos podr´ıamos plantear modificar el RESTORE ALL y el SAVE ALL en vez de usar
+la soluci´on planteada. Pero queremos ahorrar l´ıneas de c´odigo y por lo tanto
+todos los handlers van a usar las mismas macros para evitar duplicaciones y m´as
+posibilidades de errores. Recordemos que para las interrupciones e excepciones
+hardware s´ı se debe guardar el valor de %eax. Por ese motivo se soluciona en
+el propio handler de las llamadas al sistema y no en las macros.
+El fallo de una llamada al sistema devuelve el valor -1 y en errno el c´odigo de
+error. Pero el kernel no trabaja as´ı, en el modo sistema se pondr´a un valor igual
+o mayor a 0 si todo va bien y si va mal se pondr´a el valor negativo del c´odigo
+de error. Por ese motivo, en el wrapper, debemos solucionarlo para devolver lo
+que se espera:
+int write(fd, *buffer, size){
+// se pone en cada registro el
+// valor correspondiente
+ebx <- fd;
+ecx <- buffer;
+edx <- size;
+mov %eax, #;
+int 0x80;
+// si eax es menor que 0, significa que
+// hay error y en eax hay el c´odigo de error.
+// por eso negamos %eax y devolvemos -1.
+if(%eax < 0){
+errno = -%eax;
+return -1;
+}
+ret
+}
+
+#### 1.4 Interrupciones y excepciones
+Los handlers de las interrupciones o excepciones hardware no usan la syscall
+table, ya que es para las llamadas al sistema. Un handler de una excepci´on o
+interrupci´on HW no hace verificaciones de datos, ya que se conf´ıa siempre que
+el HW va a pasar datos v´alidos; adem´as no tiene que guardar el %eax como
+pasaba antes. Lo que s´ı que hacen es un EOI para indicar que se ha acabado de
+tratar la interrupci´on y se pueden recibir nuevas.
+Las rutinas de servicio para estos tambi´en son m´as sencillas porque no devuelven
+nada ni tienen ning´un par´ametro. La pila, despu´es del push ebp para una
+interrupci´on HW es exactamente igual que la vista anteriormente: Contexto
+Hardware, Contexto Software + pila de rutina con @ret y ebp.
+Para las excepciones es lo mismo pr´acticamente: no hay parte de usuario y no
+hay EOI. Lo dem´as es igual.
+Sin embargo hay algunas excepciones que cambian la pila del sistema. Algunas
+a la hora de crear el contexto hardware pasan un par´ametro, por lo que tienen
+un par´ametro a˜nadido al contexto hardware; por ejemplo la direcci´on que ha
+causado la excepci´on. Por este motivo, a veces, en el handler se va a tener que
+incrementar en 4 el contenido de ESP para anular el par´ametro de la pila antes
+de hacer el IRET.
+
+### 2 Sistemas de memoria
+En los primeros sistemas, la memoria f´ısica se correspond´ıa de forma id´entica con
+las direcciones de memoria del programa. El principal problema de ese m´etodo
+era que no exist´ıan los niveles de privilegios, por lo que los programas se
+deb´ıan fiar del SO para que sus espacios de memoria no fuesen manipulados.
+Para solucionar esos problemas, Intel cre´o la MMU. Esta peque˜na memoria
+guardaba la direcci´on f´ısica de inicio del sistema operativo. La MMU verificaba
+si la direcci´on que el usuario quer´ıa usar era m´as peque˜na que la del sistema
+operativo y si no lo era, detectaba que el proceso quer´ıa entrar en el espacio de
+memoria del sistema operativo y lo mataba.
+A medida que avanz´o el tiempo, las CPUs eran m´as potentes y pod´ıan ejecutar
+m´as de 1 programas a la vez. Apareci´o un problema con como se guardaban las
+cosas en memoria. Si se segu´ıa con ese m´etodo, todos los desarrolladores ten´ıan
+que ponerse de acuerdo para no pisarse entre ellos en memoria. Aqu´ı es donde
+naci´o la idea de direcciones l´ogicas. Todos los programas ahora se compilar´ıan
+empezando en la direcci´on de memoria 0. Las direcciones de programa, ahora,
+son offsets desde el inicio de su respectivo espacio en memoria f´ısica. Esto son
+las direcciones l´ogicas.
+Ahora la CPU, cuando va a ejecutar un programa, lo aloja en memoria d´onde
+le parece mejor. Por eso, a partir de ahora va a ser necesario hacer traducciones
+de las direcciones l´ogicas (del programa) a direcciones f´ısicas.
+Para estas traducciones, se aplican mejoras en la MMU. Ahora hay dos nuevos
+registros; uno contiene la direcci´on f´ısica inicial d´onde se ha puesto el pro-
+grama. El segundo registro contiene el tama˜no de este proceso en memoria;
+para hacer la traducci´on la MMU va a coger la direcci´on l´ogica (que no deja
+de ser un offset desde el inicio del programa) y se la va a sumar a la direcci´on
+f´ısica inicial que guarda el primer registro. De este modo se puede hacer la
+traducci´on.
+Aparte de traducir, la MMU tambi´en debe proteger al Sistema Operativo y
+adem´as a los procesos entre ellos. Para hacer esta protecci´on se usa el segundo
+registro; comprueba si la direcci´on l´ogica obtenida es m´as peque˜na que el tama˜no
+del programa.
+
+#### 2.1 La fragmentaci´on
+Con este m´etodo aparece un gran problema: a medida que los procesos mueren,
+van quedando huecos de distintos tama˜nos entre los espacios asignados de
+otros procesos.
+Figure 1: Problema de fragmentaci´on
+Como vemos en la figura 1, una vez liberados P1 y P3 existe espacio suficiente
+en memoria para P5; sin embargo P5 no va a poder ser asignado, ya que con el
+modelo actual los espacios deben ir consecutivos en memoria. No se pueden
+aprovechar los espacios liberados.
+Para solucionar este problema se mantienen las direcciones l´ogicas para los pro-
+cesos, pero ahora desde el punto de vista l´ogico el programa se va a ver dividido
+en segmentos del mismo tama˜no (esto es un hecho l´ogico, virtual; en realidad
+no ocurre nada). A cada uno de estos segmentos se les llamar´a p´agina l´ogica,
+y contiene un conjunto de direcciones l´ogicas consecutivas.
+En memoria f´ısica hacemos lo mismo. Se divide de forma virtual en segmentos
+del mismo tama˜no, iguales que las p´aginas l´ogicas. Estos segmentos se van a
+llamar p´aginas f´ısicas o frames.
+—— Una p´agina es un conjunto de direcciones consecutivas.
+Los programas siempre van a tener las direcciones l´ogicas de forma consecutiva
+(como hasta ahora), pero a la hora de alojar el programa en memoria f´ısica, no
+vamos a tener porque alojarlo de forma consecutiva. Las p´aginas l´ogicas se van
+a alojar en p´aginas f´ısicas, sin necesidad de que sean p´aginas consecutivas (ver
+Figura 2).
+Para hacer estas traducciones se usa el Translation Lookaside Buffer (TLB).
+
+Figure 2: P´aginas l´ogicas y f´ısicas
+
+#### 2.2 El TLB
+El TLB es una estructura hardware de la CPU. Hay un TLB por cada proce-
+sador. El TLB es una extensi´on de la MMU; una tabla de asociaciones de
+p´aginas l´ogicas a f´ısicas. Normalmente suele tener 512 o 1024 entradas. El TLB
+debe ser capaz de traducir muy r´apido: una direcci´on por ciclo de la CPU.
+Las p´aginas normalmente son de 4KB y sabemos que dentro del espacio l´ogico
+todas las direcciones son consecutivas. Si calculamos:
+log2(4KB) = 12
+Vemos que se necesitan 12 bits para indexar todo el espacio de direcciones de
+una p´agina. Una direcci´on l´ogica tiene 32 bits, de estos 32 bits vamos a usar los
+12 bits de menor peso para indexar las direcciones dentro de una p´agina.
+De esta forma, como las p´aginas l´ogicas y f´ısicas tienen el mismo tama˜no,
+cuando hacemos la traducci´on y empezamos a generar una direcci´on f´ısica a
+partir de una l´ogica, se podr´an usar esos 12 bits de menos peso de la direcci´on
+l´ogica sin necesidad de hacer nada para la direcci´on f´ısica. Estos 12 bits son
+el offset dentro de una p´agina.
+Los 20 bits restantes van a servir como el identificador de p´agina (l´ogica o f´ısica).
+Estos 20 bits van a pasarse al TLB y este va a buscar si existe alguna entrada
+con ese ID de p´agina l´ogica:
+
+Figure 3: Direcci´on
+• Si existe: Es un hit de TLB. El ID de p´agina f´ısica asociado se pone
+como la parte alta de la direcci´on traducida a f´ısica junto al offset de 12
+bits (que no cambia). Todo esto ocurre en un ciclo de CPU.
+• Si no existe: Es un miss de TLB. En este caso el TLB no es capaz
+de traducir la direcci´on, por eso va a acceder al registro cr3 que apunta a
+la tabla de p´aginas del proceso en memoria, all´ı buscar´a el ID de p´agina
+f´ısica correspondiente y lo va a guardar en el TLB.
+El registro cr3 contiene la direcci´on de inicio de la tabla de p´aginas del proceso
+actual y existe un cr3 por procesador.
+Hay una tabla de p´aginas en memoria por proceso, y esta es un vector con
+tantas entradas como p´aginas l´ogicas hay en el proceso; d´onde cada
+entrada contiene el identificador de la p´agina l´ogica asociada. En una m´aquina
+de 32 bits, con identificadores de 20 bits, tendremos 2^20 entradas en la tabla de
+p´aginas (son much´ısimas, el TLB son solo entre 512 y 1024).
+El TLB, durante un miss, debe calcular el offset para llegar a la posici´on corre-
+spondiente dentro de la tabla de p´aginas del proceso y encontrar la direcci´on de
+la p´agina f´ısica asociada. Una vez encontrada, se busca una entrada del TLB
+que se pueda sustituir (con un algoritmo como puede ser LRU) y se guarda la
+asociaci´on en el TLB. Ahora, desde el TLB, ya que todas las traducciones se ha-
+cen desde all´ı, se puede hacer la traducci´on de esta p´agina que hab´ıa producido
+un miss.
+En el momento que se hace el salto a modo protegido (antes de saltar a modo
+usuario, en el tiempo de boot), se activa el nivel de privilegios y la pagi-
+naci´on. Esto significa que antes del salto, no tenemos paginaci´on ni priv-
+ilegios. En el momento que se activa la paginaci´on, todo va a trabajar con
+direcciones l´ogicas (usuario y sistema).
+Las tablas de p´aginas se encuentran en direcciones l´ogicas (el cr3 contiene una
+direcci´on l´ogica). Cuando se va a acceder a la tabla de p´aginas del proceso,
+el TLB debe pasar "por s´ı mismo" otra vez, para traducir la direcci´on l´ogica
+que se encuentra en cr3. Por eso, sin el TLB no podr´ıamos tener paginaci´on;
+porque para acceder al cr3 necesitamos hacer una traducci´on.
+Dentro del TLB hay un espacio reservado que siempre hace referencia a la
+memoria del sistema operativo.
+Por este motivo, que todo funciona con direcciones l´ogicas cuando estamos en
+modo protegido, no se puede hacer la traducci´on usando solo la tabla de p´aginas.
+
+Figure 4: Esquema de traducci´on de un miss de TLB
+Necesitamos alg´un elemento capaz de traducirnos estas direcciones.
+
+#### 2.3 Bits extra del TLB
+Permisos
+Se le a˜naden nuevos campos a la tabla de p´aginas, entre otros, los permisos
+R/W/X para cada p´agina. El TLB a˜nade 3 bits tambi´en para eso, y ahora al
+traer las asociaciones de p´aginas despu´es de un miss de TLB, tambi´en se van
+a traer los permisos.
+Nivel de privilegios
+Adem´as de esto, cada p´agina va a tener dos bits adicionales que representar´an
+el nivel de privilegios necesario.
+En la tabla de p´aginas del proceso existen unas entradas asociadas a la memoria
+del Sistema Operativo. Siendo esto as´ı, podr´ıa ser una vulnerabilidad, ya que se
+podr´ıa acceder a la memoria del Sistema Operativo (con fuerza bruta, por ejem-
+plo). Para solucionar esto se a˜nade el nivel de privilegio para cada entrada
+de la tabla de p´aginas. Este conjunto de p´aginas que se corresponden con la
+memoria del sistema operativo, van a necesitar un nivel de privilegios superior
+para poder ser accedidas.
+As´ı que, para cada p´agina l´ogica no solo va a tener los permisos de Lectura,
+Escritura y Ejecuci´on; sino que adem´as va a limitar el nivel de privilegios desde
+el cual se puede acceder a esta.
+Presencia
+Cuando se monta la imagen l´ogica de un proceso en memoria, en un trozo vamos
+a tener el c´odigo, en otro trozo los datos y al final de todo, la pila. De forma
+intencionada, se dejan espacios libres entre ellos. Esto se hace porque sabemos
+que la pila, en alg´un momento va a crecer y le dejamos espacio para que pueda
+crecer. Los datos tambi´en van a ir creciendo, por eso tambi´en dejamos espacio.
+
+Figure 5: Estructura de la pila de un proceso
+Los espacios libres son p´aginas l´ogicas sin p´aginas f´ısicas asignadas. Las p´aginas
+libres no est´an asignadas al c´odigo, datos o pila. Simplemente no est´an asig-
+nadas. Solo se asignan las p´aginas que van a contener algo. Lo esquematizamos
+de esta forma simplificada para que se entienda. Cuando se necesita m´as es-
+pacio, se van asignando p´aginas f´ısicas de forma din´amica a medida que esos
+segmentos van creciendo.
+Como vemos, hay segmentos del espacio l´ogico del proceso sin memoria f´ısica
+asignada. Esto significa que cuando vamos a buscar una p´agina l´ogica, debemos
+poder saber si tiene o no una p´agina f´ısica asignada; ya que si no la tiene vamos
+a tener que generar un error.
+De esto ´ultimo se ocupa el bit de presencia. Nos indica si el contenido de la
+p´agina es v´alido o no. Cuando tenemos un fallo de TLB, vamos a la entrada
+correspondiente de la tabla de p´aginas y antes de copiar todos los datos de la
+entrada, lo que hace el procesador es mirar el bit de presencia.
+Si el bit de presencia es 1, significa que la p´agina es v´alida y que se puede copiar.
+Si el bit de presencia es 0, significa que la p´agina no se encuentra en la tabla de
+p´aginas (ni tampoco en el TLB). En este caso se lanza una excepci´on de Page
+Fault: se est´a accediendo a una direcci´on l´ogica que no tiene ninguna direcci´on
+f´ısica asignada (en ZeOS sale un aviso).
+En un Sistema Operativo moderno, desde el handler de page fault se hace una
+llamada a un daemon llamado daemon pager (paginador). El paginador mon-
+itoriza el estado de la memoria f´ısica de la m´aquina para hacer una gesti´on efi-
+ciente de esta. Es el responsable de saber qu´e ha pasado con la p´agina que ha
+generado el page fault.
+Los procesos, en los sistemas actuales, pueden consumir memoria virtual siendo
+la suma de su memoria superior a la memoria f´ısica. Esto nos permite extender
+la memoria f´ısica de la m´aquina usando el disco. Lo que se hace es pasar
+p´aginas de memoria al disco y a la inversa.
+Cuando al paginador le salta la excepci´on de p´agina le llega a trav´es de un
+par´ametro el identificador de la p´agina que ha causado esa excepci´on; el pagi-
+nador tiene un historial de qu´e p´aginas tienen su contenido en el disco. Cuando
+el paginador lo considera, puede volcar las p´aginas de un proceso en el disco;
+cuando esto pasa, el bit de presencia se pone a cero. El bit de presencia real-
+mente indica si una p´agina l´ogica est´a asignada a una p´agina f´ısica de memoria
+o no. Pero eso no significa que la p´agina l´ogica no pueda estar asignada a una
+p´agina virtual en disco.
+El paginador, cuando le llega una excepci´on, va a buscar en esa estructura para
+saber si est´a en el disco. En el caso que la p´agina no aparezca tampoco en esta
+estructura, va a lanzar un segmentation fault; la p´agina no esta asignada a
+nada. Por el contrario, si se encuentra dentro de esa estructura, el paginador
+(que tambi´en guarda un listado de las p´aginas f´ısicas libres) va a cargar la
+p´agina virtual asociada del disco y la va a volcar en la primera p´agina f´ısica
+libre que encuentre y va a quitar esa p´agina de la lista de p´aginas f´ısicas libres.
+Se modifica la tabla de p´aginas con la nueva asignaci´on y pone el bit de presencia
+a 1.
+Ahora el TLB ya es capaz de hacer la traducci´on. Esto se le llama fallo de
+p´agina y es una operaci´on muy costosa.
+
+#### 2.4 Paginaci´on
+Problema
+Cuando hay un fallo de TLB, este consulta al registro cr3 (que contiene la
+direcci´on de inicio de la tabla de p´aginas) y busca en la tabla la asociaci´on de
+la p´agina l´ogica y la f´ısica para traerla al TLB. Esto se hace con los 20 bits de
+mayor peso de una direcci´on de 32 bits, el indicador de p´agina.
+Eso significa que la tabla de p´aginas tiene 2^20 entradas. Una direcci´on de 32
+bits ocupa 4 Bytes. Eso significa que la tabla de p´aginas tiene un tama˜no total
+de 2^20 x 4 Bytes. Aproximadamente cada tabla de p´aginas ocupa 4 MB en
+mem´oria.
+Tenemos una tabla de p´aginas por proceso, si tenemos 100 procesos significa
+que estamos usando 400 MB para guardar tablas de p´aginas. Eso es inviable.
+Adem´as, como ya hemos visto antes, hay trozos en la tabla de p´aginas que est´an
+libres de traducciones y solo ser´an usados en supuestos casos de crecimiento de
+ciertos datos.
+Soluci´on
+Para solucionar este problema, se hace una optimizaci´on. Ahora tendremos una
+tabla de p´aginas multinivel (2 niveles).
+Dividimos la tabla de p´aginas (de 2^20 entradas) en segmentos de 2^10 entradas
+cada uno (4KB), de esta forma optimizamos m´as el espacio, ya que se puede
+destinar segmentos mucho m´as peque˜nos que antes.
+Se a˜nade, adem´as, una nueva estructura llamada directorio de p´aginas d´onde
+cada entrada contiene la direcci´on del segmento de la tabla de p´aginas asociado.
+Tambi´en hay un bit de validez que nos indica si el segmento existe o no.
+El directorio tiene 2^10 entradas (4KB). Gracias a a˜nadir esta estructura, pode-
+mos hacer una gesti´on mucho m´as ´optima de la memoria.
+B´asicamente, en vez de hacer una divisi´on solo por p´aginas d´onde cada proceso
+tiene una tabla de p´aginas de 2^20 entradas en la que, los espacios libres no se
+pueden optimizar, vamos a tener una doble divisi´on d´onde cada proceso podr´a
+ocupar de 4KB en 4KB. Un proceso peque˜no, por ejemplo de 2KB, ahora solo
+va a ocupar los 4KB del directorio de p´aginas y 4KB de un segmento. En total
+8KB. Pudiendo llegar a un m´aximo de 2^20 * 4KB, 4GB.
+
+Figure 6: Nuevo modelo. Directorio + tabla de p´aginas segmentada.
+El TLB solo accede a la tabla de p´aginas cuando hay un fallo, como hemos visto
+antes en la definici´on el problema.
+Ahora, las direcciones de 32 bits se dividen de forma distinta. Los 12 bits de
+menor peso siguen siendo el offset, pero los 20 bits del identificador se dividen:
+los 10 primeros indexan dentro del directorio y los 10 siguientes indexan dentro
+de la tabla de p´aginas. Ahora el registro cr3 contiene la direcci´on inicial del
+directorio de p´aginas.
+
+Figure 7: Esquema de una traducci´on multinivel.
+
+### 3 Procesos
+#### 3.1 El ciclo de vida de un proceso
+Tenemos estructuras de management que gestionan estos estados. En concreto
+tenemos un vector de PCB con todos los PCB de los procesos del sistema,
+este vector tambi´en determina el n´umero m´aximo de procesos que puede tener
+el sistema.
+Ready
+En este estado se encuentran todos los procesos que est´an listos para
+ejecutarse. Ya sea que se van a ejecutar por primera vez o que ya se
+han ejecutado anteriormente y pueden seguir ejecut´andose. Todos estos
+procesos est´an en la readyqueue, que encadena los PCB's de los procesos
+del vector mencionado anteriormente.
+Run
+En algun momento el planificador va a cambiar un proceso del estado de
+ready a este estado. En run no hay ninguna estructura. De este estado
+se puede pasar a ready, si expira el quantum por ejemplo. Tambi´en se
+puede pasar a blocked si se est´a realizando alguna operaci´on de larga
+latencia (p.e entrada del usuario).
+En alg´un momento un proceso en run va a pasar al estado zombie, hasta
+que alguien lea su estado de finalizaci´on.
+Blocked
+En este estado tambi´en se tiene una cola de PCB's de los procesos bloquea-
+dos esperando un determinado recurso. Cuando se termina la operaci´on
+de larga latencia, el proceso vuelve a ready.
+Zombie
+En este estado se encuentran todos los procesos que ya han liberado todos
+los recursos excepto el PCB, d´onde hay el estado de finalizaci´on que debe
+leer el padre del proceso. Una vez le´ıdo, el proceso muere y desaparece.
+
+#### 3.2 La pila de un proceso
+La pila de un proceso suele ocupar el tama˜no de una p´agina (4KB). Dentro de la
+misma pila, en la cima, se encuentra el task_struct del proceso (o PCB). Esto
+es as´ı ya que cuando un proceso se encuentra en estado de run, es necesario
+poder acceder al task_struct del proceso.
+Esto es as´ı ya que, por ejemplo en ready podemos saber que un proceso est´a
+en ese estado porque lo encontramos en la cola de ready. Para blocked lo
+encontraremos en la cola de blocked. Para los porcesos zombie normalmente
+existe una lista dentro del task_struct del padre d´onde se encolan los procesos
+en estado zombie. Pero para los procesos en estado run, no se guarda el PCB
+en ning´un sitio; pero de igual forma vamos a necesitar acceder al PCB para
+hacer las gestiones de este.
+La forma en que se consigue acceder al PCB de un proceso en run depende del
+sitema operativo. En Windows se utiliza el registro GS que apunta directa-
+mente al EPCB (el PCB del proceso); hay un registro que siempre apunta al
+PCB del proceso en ejecuci´on.
+En Linux es distinto; como tenemos el task_struct solapados dentro de la
+misma p´agina, lo que sabemos que va a pasar siempre es que esp, que en modo
+sistema apunta a la cima de la pila de sistema del proceso, va a estar apuntando
+una direcci´on dentro de la p´agina l´ogica d´onde tenemos el task_struct. Para
+eso podemos usar el registro esp para hallar el PCB.
+El inicio del task struct va a estar siempre al inicio de una p´agina l´ogica,
+eso es as´ı porque conocemos como se ha programado el sistema operativo. El
+inicio de una p´agina l´ogica siempre esta alineado a 4KB (tama˜no de p´agina),
+as´ı que el task struct va a estar siempre alineado a 4KB tambi´en. Esto significa
+que el inicio de una p´agina l´ogica va a ser siempre igual: 0x 000. Siempre
+va a acabar con tres ceros (12 bits a cero).
+Para calcular el inicio de la p´agina, solo necesitamos el registro esp y hacer
+una m´ascara: %esp & 0xFFFFF000. De esta forma podemos hallar siempre el
+task struct de la pila del proceso en ejecuci´on. A esta m´ascara la llamamos
+"funci´on current() ".
+
+#### 3.3 Multiplexaci´on de procesos
+En un sistema donde solo se puede ejecutar un thread a la vez; en estos ca-
+sos, para simular la ejecuci´on de m´ultiples procesos a la vez lo que se hace es
+multiplexar el tiempo de CPU de forma muy r´apida.
+Esta multiplexaci´on debe ser extremadamente r´apida, ya que va a pasar de
+forma muy repetida.
+Para hacer esto se hace lo que llamamos un cambio de contexto. Se pasa
+un proceso que est´a en run y lo pasamos a ready y un proceso que no se est´a
+ejecutando va a pasar a run.
+Este cambio de contexto ocurre en una funci´on del sistema operativo llamada
+task_switch (cambio de tarea). Todos los procesos deben pasar por esta
+funci´on para poder entrar en la CPU; ya sea un proceso nuevo o un proceso
+que est´a esperando. Esta funci´on recibe un ´unico par´ametro: el puntero al
+task union del proceso que se quiere poner en ejecuci´on.
+¿Como llegamos al task_switch?
+Al saltar la interrupci´on de reloj el procesador accede a la IDT, a la GDT y a
+la TSS (estructuras del sistema) para hallar la direcci´on de la pila de sistema.
+Una vez hallada, el procesador empila el contexto hardware.
+Ahora se va a ejecutar el handler de la interrupci´on de reloj, d´onde lo primero
+que se hace es un SAVE ALL, por lo que se va a guardar el contexto software en
+la pila.
+Dentro de este handler, antes o despu´es se va a hacer una llamada a la rutina
+de servicio de la interrupci´on de reloj. Con esta llamada, se a˜nade a la pila de
+sistema la direcci´on de retorno (@ret).
+Ahora nos encontramos dentro de la clock routine, por lo que lo primero que
+se hace es un push ebp y a continuaci´on se hace que ebp apunte al ebp que
+acabamos de empilar. Hasta ahora, la pila est´a como se puede observar en la
+Figura 8.
+
+Figure 8: Esquema de la pila de sistema una vez se ha entrado enla clock routine
+Dentro de la rutina de reloj, en alg´un punto se va a invocar el planificador. El
+planificador es algo muy complejo por lo que va a empilar muchas cosas en la
+pila (que no nos interesan por ahora). El planificador decide que se debe hacer
+un cambio de contexto: se debe multiplexar el proceso.
+Para hacer esto se va a llamar a la funci´on task_switch, sabemos que en la
+cima de la pila de sistema, despu´es de todo lo que ha empilado el planificador,
+habr´a los par´ametros de la funci´on (en este caso, solo uno: *new), la direcci´on
+de retorno del c´odigo desde el cual se ha llamado a task switch (en este caso el
+c´odigo del planificador) y cuando ejecutemos la funci´on se va a hacer otro push
+ebp y esp y ebp apuntar´an a la cima de esta pila de sistema. Ver la Figura 9.
+
+Figure 9: Esquema de la pila de sistema del proceso current() ecuando llega al task switch
+Esta p´agina l´ogica que vemos en la figura 9 y que contiene la pila de sistema
+del proceso current(), debemos recordar que en su cima; al inicio de la p´agina,
+tenemos el task struct (el PCB) del proceso cuya direcci´on se puede hallar con
+una m´ascara en esp.
+La pila de sistema del proceso new (hablamos de procesos que ya hab´ıan estado
+en CPU y el planificador los sac´o), va a ser muy parecida a la que hemos visto en
+la figura 9 ya que este proceso fue sacado de la CPU usando tambi´en task switch
+y por lo tanto la pila en ese momento ten´ıa la misma estructura que la que hemos
+visto, con distintos valores.
+El cambio de contexto
+1. Debemos tener en cuenta que el espacio de direcciones l´ogico de current()
+es distinto al espacio de direcciones l´ogicas de new. Por lo tanto, el mapeo
+de direcciones l´ogicas a f´ısicas que tiene current() ser´a distinto al de new.
+Si no hacemos nada con el registro cr3, este estar´a apuntando a la tabla de
+p´aginas de current(), pero al salir a modo usuario vamos a querer usar la
+tabla de p´aginas del proceso new por lo que este cr3 debe ser modificado
+para que apunte a la tabla de p´aginas de new.
+As´ı que dentro del task_switch, tambi´en debemos modificar el registro
+cr3 como podemos ver en la l´ınea 6 de la figura 10. Cuando se escribe
+en cr3, se hace un flush del TLB de forma autom´atica, por lo que
+la traducci´on de l´ogicas a f´ısicas de current() se pierde y se ir´a cargando
+con las traducciones de new.
+Cuando pasa esto, se van a generar unas r´afagas de fallos de TLB. Por
+esto el task switch es m´as lento de lo que podr´ıa ser.
+2. Cada vez que llega una interrupci´on se accede a la IDT, luego a la GDT
+y finalmente a la TSS para encontrar la direcci´on de la pila de sistema
+
+Figure 10: Pseudoc´odigo de la funci´on task switch
+del proceso actual. Como se est´a haciendo un cambio de contexto, nos
+tenemos que asegurar que despu´es de salir a modo usuario, la pila de
+sistema a la cual apunte el campo esp0 de la TSS sea la del proceso new.
+Dentro del task_switch se tiene que hacer que la pila de sistema actual
+que se utilice en modo sistema sea la de new. De este modo cuando se
+vuelva a saltar a modo sistema, la pila de sistema ser´a la de new.
+Eso se hace con lo que podemos ver en la l´ınea 7 de la figura 10 d´onde se
+hace que el campo esp0 de la TSS sea la direcci´on de la base de la pila
+de new.
+¿Por qu´e la base de la pila? Se debe tener en cuenta que cuando se
+salta a modo usuario a modo sistema, la pila de sistema va a estar vac´ıa.
+Eso es as´ı porque cuando hemos saltado a modo usuario se ha tenido
+que desempilar toda la pila de sistema (para ir volviendo hasta el modo
+usuario). As´ı que la base y la cima de la pila de sistema, en esta situaci´on,
+coinciden.
+3. Se guarda el estado de current() ya que va a ser sacado de la CPU.
+Para esto, dentro del task_struct de current, se crea una nueva vari-
+able llamada kernel esp d´onde se guarda el valor del esp actual de
+forma que esta nueva variable va a apuntar a la cima de la pila de sis-
+tema de current() que es d´onde hay el ebp que guardamos dentro del
+task_switch. Ver l´ınea 9 del c´odigo en la figura 10.
+Haciendo esto, estamos guardando todo el contexto de ejecuci´on de current()
+con una sola l´ınea de c´odigo, porque la pila de sistema del proceso contiene
+todos los frames de activaci´on de las funciones hasta llegar al task_switch.
+Adem´as, en el mismo rangos de 4KB, hay el task_struct del proceso current().
+Por definici´on, sabemos que en el task_struct de new tambi´en tenemos
+esta variable kernel esp ya que cuando se sac´o de la CPU se hizo lo mismo.
+4. En el registro esp del procesador se va a cargar el kernel esp de new.
+Ver l´ınea 10 del c´odigo en la figura 10.
+El registro esp, que antes apuntaba a la cima de la pila de sistema de
+current() ahora apuntar´a a la cima de la pila de sistema de new. Con
+esto, la pila de sistema pasa a ser la de new.
+5. Se hace un pop ebp para recuperar el ebp que hab´ıa antes de entrar en el
+task_switch y un ret para recuperar el c´odigo que se estaba ejecutando
+(planificador). El task_switch siempre acaba con pop ebp y ret porque
+task_switch siempre espera que en la cima de la pila de sistema contenga
+ebp y una direcci´on de retorno.
+Despu´es va a ocurrir otro ret que ejecutar´a el handler de la inter-
+rupci´on de reloj (d´onde empez´o todo).
+Cuando al final se salga al modo usuario, se va a salir pero en el proceso new.
+6. Una vez completados los pasos anteriores, y desempile todo su contexto de
+ejecuci´on (incluidos el contexto software y hardware) de la pila, al hacer el
+iret dentro del clock handler, el procesador ya estar´a ejecutando new.
+El cambio de pila es lo que hace que se cambie el proceso en ejecuci´on. Son
+los valores de la pila de sistema; sus contextos y sus frames de activaci´on
+lo que determinan cu´al es cada uno de los procesos.
+Nota:
+(a) En la pila de new habr´a guardado tambi´en un puntero a "new" (le
+llamaremos oldnew para aclararnos), igual que en current(). Este
+oldnew es el proceso que se utiliz´o en su momento para sacar a new
+de la CPU.
+Todo esto se hace con menos de 20 instrucciones en ensamblador. Es muy
+r´apido.
+¿C´omo se preserva el valor de los registros seguros durante el task_switch?
+La funci´on task_switch que hemos estado hablando en realidad se llama inner task_switch
+y la funci´on task_switch realmente es un wrapper de la funci´on inner task_switch
+d´onde se hace un push de los registros que se quieren guardar (edi, esi, etc.) y
+dentro de este wrapper es d´onde se va a hacer una llamada a inner task_switch.
+
+#### 3.4 La llamada fork()
+En Linux la creaci´on de procesos es a trav´es de la llamada fork(). Esta llamada
+crea una copia del proceso padre, replicando el c´odigo, datos y pila al proceso
+hijo. No comparten c´odigo, datos y pila sino que tienen una copia. Esta
+funci´on devuelve al padre pid del hijo y al hijo le devuelve 0. De esta forma
+podemos repartir trozos de c´odigo entre el padre y el hijo. En caso de error
+devuelve -1 y en errno hay la clase de error.
+En Windows es completamente distinto. La llamada fork() no existe, por el
+contrario hay un proceso cargador. Al crear un proceso en Windows siempre
+se hace para ejecutar c´odigo nuevo. Para crear un proceso en Windows se usa
+create_process() al que se le pasa nombre del ejecutable que se va a usar para
+crear el proceso. Es muy complejo. En SOA, nos centramos en fork().
+
+##### 3.4.1 Implementaci´on de fork()
+Asignar un union task_union
+Es decir, le asignamos un PCB libre de la freequeue. Notar que el union
+task_union no es solo el task_struct, sino que tambi´en contiene la pila del
+proceso.
+Asignar al proceso hijo un contexto de ejecuci´on
+Inicializamos inicial de su task_struct y su pila de sistema. Para esto, los
+4KB que ocupa el union task_union del proceso padre se copiar´an al union
+task_union del proceso hijo. De esta forma se inicializa el task_struct y la
+pila de sistema del proceso hijo.
+Asignar tabla de p´aginas al proceso hijo
+Se le asigna una tabla de p´aginas (un directorio de p´aginas en realidad) al
+proceso hijo.
+Copia de memoria
+.
+Una vez se tiene asignada una tabla de p´aginas al proceso hijo, se empieza a
+realizar la copia de memoria del proceso padre al proceso hijo (codigo, datos y
+pila).
+Esta copia se hace de una forma determinada. En la tabla de p´aginas del pro-
+ceso padre, se pueden diferenciar varias secciones bien definidas: una primera
+secci´on d´onde se encuentran los mapeos de las direcciones l´ogicas a f´ısicas del
+kernel. Otro segmento corresponde al c´odigo, otro a los datos y por ´ultimo
+el que corresponde a la pila.
+La tabla de p´aginas del proceso hijo est´a vac´ıa por el momento. Dependiendo
+de qu´e segmento se va a copiar se va a hacer de una forma u otra:
+• Segmento de kernel: el kernel tiene asignadas unas p´aginas f´ısicas
+d´onde guarda su kernel, pila, datos, etc. Se busca que todos los pro-
+cesos compartan las mismas p´aginas f´ısicas de kernel; el kernel debe ser el
+mismo independientemente del proceso que se ejecute.
+Para eso, en el fork(), la parte de la tabla de p´aginas que corresponde
+al kernel se copia exactamente igual del padre al hijo. Se iteran una a
+una las tablas de p´aginas correspondientes al kernel y se copian id´enticas
+al la tabla de p´aginas del proceso hijo.
+• Segmento de c´odigo, datos y pila: Los procesos no comparten memo-
+ria; los procesos tienen copias de c´odigo, datos y pila del proceso padre,
+pero no lo comparten.
+Cada una de las entradas, tienen asignadas p´aginas f´ısicas. Para el proceso
+hijo queremos que tenga asignada otras p´aginas f´ısicas distintas y que se
+copie el contenido del padre al hijo.
+Para hacer eso, se va a mirar la tabla de p´aginas del padre y, por cada
+entrada que tenga una p´agina f´ısica del padre se va a asignar una p´agina
+f´ısica de la misma entrada al hijo: se asignan tantas p´aginas f´ısicas
+como tiene el padre, al hijo.
+Una vez el hijo tiene p´aginas f´ısicas asignadas, se debe empezar a copiar
+el contenido del padre al hijo. Esto conlleva un problema: El procesador
+no tiene acceso directo a las p´aginas f´ısicas de los procesos porque estamos
+trabajando con paginaci´on y se deben traducir las direcciones a trav´es
+del hardware; usando el TLB.
+El registro cr3 apunta a la cima de la tabla de p´aginas del proceso padre
+y solo hay un registro cr3. Esto significa que el TLB no ve los mapeos
+que estamos creando en la tabla de p´aginas del hijo. No se va a poder
+hacer la traducci´on para las p´aginas del hijo. Las traducciones las
+hace el hardware y no el software.
+¿C´omo se va a poder escribir en la memoria f´ısica que tiene asignado el
+proceso hijo si el TLB solo puede ver la tabla de p´aginas del proceso padre?
+Para solucionar este problema debemos tener en cuenta que, por definici´on,
+sabemos que en la tabla de p´aginas del proceso padre hay p´aginas
+libres (sin asignar a p´agina f´ısica). Se define que un proceso no pueda
+ocupar todas sus p´aginas para casos como este.
+Estamos en sys_fork() por lo que quien est´a ejecutando estas instruc-
+ciones es el sistema (no el padre!) desde el contexto de ejecuci´on del
+padre. Para hacer esta copia de datos, como estamos en modo sistema
+tenemos acceso a los task_struct del padre y el hijo y a las tablas de
+p´aginas del padre y el hijo. El sistema operativo sabe qu´e p´aginas se est´an
+asignando al proceso hijo y tambi´en tiene un listado de las p´aginas libres
+en la tabla de p´aginas del padre. Lo que se va a hacer es que las p´aginas
+f´ısicas que se est´an asignando al proceso hijo se van a asignar de forma
+temporal, a la vez, a los distintos espacios libres de la tabla de p´aginas del
+padre.
+Ahora, a trav´es de las direcciones l´ogicas que se quieren copiar del padre
+se va a acceder al su contenido en las p´aginas f´ısicas y se van a ir copiando
+a las p´aginas f´ısicas del hijo a trav´es de este mapeo temporal que se ha
+creado dentro de la tabla de p´aginas del padre.
+
+Figure 11: Esquema de la copia de datos de padre a hijo
+Una vez se ha hecho esto para todas las p´aginas l´ogicas, se eliminan los mapeos
+temporales de la tabla de p´aginas del padre y se hace un set_cr3() para hacer
+un flush del TLB y quitar todos los mapeos temporales de all´ı tambi´en.
+Actualizaci´on de las estructuras del hijo
+Los procesos tienen muchas estructuras distintas que deben ser inicializadas
+(vector de signals, tabla de canales del pcb, etc).
+Para inicializar la tabla de canales del hijo, por ejemplo, se copian las p´aginas
+de la tabla de canales del padre a la tabla de canales del hijo y se incrementa el
+n´umero de referencias de ese fichero en la tabla de ficheros abiertos. Hay una
+tabla de canales por proceso y una tabla de ficheros abiertos en todo el
+sistema.
+Se deben inicializar todas las estructuras del proceso hijo.
+Para asignar un PID a un proceso hijo se puede hacer de varias formas:
+• En ZeOS asignamos el PID 1000 al primer hijo de init() y se va incre-
+mentando de forma secuencial.
+• En un SO real se debe evitar que el PID de informaci´on acerca del
+proceso. En los primeros sistemas operativos, el PID era la direcci´on de
+memoria d´onde se encontraba el PCB del proceso. Eso es una vulnerabil-
+idad. El PID debe identificar el proceso sin dar informaci´on.
+Actualmente en los sistemas modernos se genera un n´umero aleatorio, si
+est´a libre, se asigna este n´umero. Si est´a ocupado se incrementa de forma
+secuencial.
+Actualizar el contexto de ejecuci´on del hijo
+Actualmente el proceso hijo tiene asignado un contexto de ejecuci´on temporal
+cuando hemos hecho una copia del union task_union del padre al del hijo.
+Pero el proceso hijo no puede tener los mismos valores que el padre en todos los
+campos; por ejemplo, debe tener un PID distinto. Adem´as, el contexto se debe
+preparar para que el proceso hijo se ponga en marcha.
+Todos los procesos entran en la CPU a trav´es del inner_task_switch. Los
+procesos nuevos tambi´en siguen este camino.
+El task_struct del proceso hijo debe ser compatible con el c´odigo del task_switch
+que hemos visto en la Figura 10. El proceso padre, cuando empieza a ejecutar
+sys_fork(), tiene un esquema similar a este:
+Antes de ir al handler de las llamadas al sistema, se va a guardar el contexto
+hardware. Una vez en el handler de las llamadas al sistema, se guarda el contexto
+software (con el (SAVE ALL) y la direcci´on de retorno al handler. Dentro
+del sys_fork() se hace un push ebp y mueve esp a ebp para crear el enlace
+din´amico.
+Para el task_switch lo importante es la cima de la pila de sistema. Si nos
+fijamos en el c´odigo del task_switch (Figura 10) cuando acabamos, en las dos
+´ultimas instrucciones, el task_switch se espera que haya un ebp y una direcci´on
+de retorno en la cima de la pila de sistema.
+Eso significa que en la pila de sistema del hijo, ya hay lo necesario para volver,
+ya que es una copia del padre. Pero para que se ejecute el c´odigo del hijo, lo
+que se va a hacer es que el kernel_esp del proceso hijo apunte al ebp que hay
+dentro de su pila. Si no hacemos esto, el kernel_esp del proceso hijo estar´a
+apuntando al ebp de la pila del proceso padre!
+Por otra parte, el sys_fork() debe devolver el PID del hijo al proceso padre
+y un 0 al proceso hijo. Por este motivo, dentro del sys_fork() (que lo est´a
+ejecutando el padre) debo devolver el PID del proceso hijo.
+Pero para el proceso hijo debo devolver un 0. Tal y como est´a la pila de sistema
+del hijo, actualmente somos incapaces de devolver un 0 ya que si el kernel_esp
+est´a apuntando al ebp de la cima de la pila y cuando se haga el proceso de
+volver al modo usuario no se devuelve en ning´un momento un 0; se devuelve lo
+que hab´ıa en eax en el contexto software.
+Para solucionar esto en un sistema operativo real, nos aprovechamos de que,
+cuando un proceso pasa de ready a run por primera vez, nos interesa hacer una
+ejecuci´on de un c´odigo espec´ıfico antes de que este empiece a ejecutar c´odigo de
+usuario para acabar de hacer algunas inicializaciones y, entre otras cosas, poder
+devolver un 0. Para esto, se va a "trucar" un poco el contexto de ejecuci´on del
+proceso hijo para que la primera vez que pase a run se pueda ejecutar este
+c´odigo espec´ıfico pudiendo as´ı adem´as devolver un 0.
+Este c´odigo espec´ıfico se va a encontrar dentro de una funci´on llamada ret_from_fork(),
+una funci´on que solo se ejecutar´a la primera vez que el proceso pase a run.
+En ZeOS, lo ´unico que se va a hacer es que el proceso cree el dynamic link y
+a continuaci´on se guarda en eax un cero y se hace un ret. En alto nivel esto
+sencillamente ser´ıa un return 0;
+Necesitamos retocar el contexto de ejecuci´on del hijo para que pueda ejecutar
+
+Figure 13: C´odigo alto nivel de ret_ from_fork()
+el ret_ from_fork() antes de pasar a ejecutar c´odigo de usuario por pirmera
+vez. Sabemos que el task_switch espera un ebp y una direcci´on de retorno
+en la cima. Lo que haremos ser´a poner un 0 ("fake ebp") en la cima de la
+pila y machacar el ebp que ten´ıamos en la pila para poner la direcci´on de ret_from_fork().
+El kernel_esp que antes apuntaba al ebp que hemos machacado
+haremos que apunte al 0 que se acaba de guardar en la cima de la pila.
+
+Figure 14: Esquema de la pila de sys_fork() del proceso hijo modificada.
+Cuando el proceso hijo vaya a pasar a usuario por primera vez, cuando se ejecute
+el task_switch, se va a cambiar a la pila de sistema del hijo (l´ınea 10 del c´odigo
+de la Figura 15) por lo que esp apuntar´a al 0 que se ha guardado en la pila
+del hijo (que se recuperar´a como ebp en el task_switch con el pop ebp) y a
+continuaci´on, con el ret se saltar´a a ret_ from_fork() (ver figura 14).
+Ahora ejecutar´a el ret_ from_fork() (ver figura 13) y al final se har´a un ret
+a la siguiente direcci´on de la pila que es el @ret de retorno al handler. As´ı salta
+al handler con el valor de eax a cero.
+A continuaci´on se pueden ver dos esquemas de los flujos de la creaci´on de un
+
+Figure 15: Pseudoc´odigo de la funci´on task switch
+proceso hijo (en ready) y de como este proceso hijo llega a la ejecuci´on.
+
+Figure 16: Creaci´on proceso hijo (arriba) y llegada del nuevo proceso a ejecuci´on (abajo)
+Viendo estos flujos, se puede notar alguna cosa que no encaja: entramos por
+el handler del reloj y se sale por el handler de las llamadas al sistema.
+Esto es algo particular cuando se ejecuta un proceso nuevo.
+Los handlers de las interrupciones hardware (como es el handler del reloj)
+deben ejecutar un EOI antes de hacer el IRET. Pero con lo que hemos visto
+hasta ahora, este EOI no se ejecutar´ıa. Si no llega el EOI no van a llegar m´as
+interrupciones de reloj y por lo tanto no se podr´ıa planificar m´as: se deshabilitan
+las interrupciones hardware.
+Para solucionar esto, debo asegurarme que el EOI se ejecute antes. Por este
+motivo, en ZeOS el EOI va antes de la llamada a la rutina de servicio de la
+interrupci´on de reloj.
+Encolar el proceso en la cola de ready
+Devolver el PID del hijo al proceso padre
+
+#### 3.5 sys_exit()
+Cuando un proceso acaba, se liberan todos sus recursos menos el PCB. Esto es
+debido a que sys_exit() tiene un par´ametro que es un codigo de finalizaci´on.
+Los procesos hijos notifican a los padres un c´odigo de finalizaci´on (0 si todo ha
+ido bien, negativo si ha ido mal).
+Cuando se hace sys_exit() se guarda en el PCB el c´odigo de finalizaci´on y se
+liberan todos los recursos menos el PCB. En alg´un momento el padre a trav´es
+de la llamada wait_pid() va a leer el c´odigo de finalizaci´on del PCB del hijo
+para saber si se debe hacer alguna cosa. El wait_pid() libera entonces el PCB
+del hijo.
+Cuando un proceso en run ejecuta exit(), aparece un nuevo estado que lla-
+mamos zombie: un proceso que se le han liberado todos los recursos y solo
+tiene asignado un PCB. El proceso saldr´a de zombie liberando el PCB cuando
+el padre haga wait_pid().
+¿Qu´e se debe hacer en sys_exit()? Se deben liberar los recursos del proceso
+(liberar tabla de p´aginas, la tabla de canales, etc.). Adem´as debe poner dentro
+del PCB del proceso el c´odigo de finalizaci´on. Por ´ultimo llama al scheduler
+para que busque y ejecute otro proceso.
+¿D´onde se guarda el PCB del hijo mientras est´a en el estado de zombie? Pregunta de ex´amen.
+
+#### 3.6 Los procesos idle() e init()
+Estos procesos se crean manualmente en tiempo de boot porque son procesos
+especiales del sistema.
+
+##### 3.6.1 idle()
+Es un proceso de sistema que, en ZeOS solo ejecuta un while(1);. Este proceso
+idle() se ejecuta cuando la cola de ready est´a vac´ıa y no hay procesos para
+ejecutar. No se puede parar la CPU porque si se para tambi´en se va a parar el
+fetch de instrucciones y por lo tanto no se va a ejecutar nada m´as.
+Para mantener la CPU en marcha, se crea este proceso que se ejecuta en modo
+sistema esperando interrupciones de reloj. Cuando llega una interrupci´on de
+reloj el planificador mira si se est´a ejecutando el proceso idle(). En este
+caso, mira directamente si la cola de ready est´a vac´ıa: si est´a vac´ıa idle() se
+sigue ejecutando y en caso contrario se saca a idle() y se pasa a ejecutar el
+proceso que esta en ready.
+En un sistema operativo real, idle() no es un bucle infinito. En un sistema
+operativo real idle() se utiliza para lo que se llama housekeeping. Cuando
+salta idle() se aprovecha para hacer limpieza en el sistema operativo (memoria,
+procesos, etc.). En un sistema operativo real, idle() es muy complejo.
+Este proceso se crea de una forma especial; es un proceso que siempre se ejecuta
+en modo sistema. Esto significa que no tiene contexto de usuario, nunca se
+salta a modo usuario desde idle(). Adem´as nunca va a estar en la cola de
+ready. Por esto, en el sistema existe un puntero apuntando al union task_union
+de idle() para que se pueda encontrar cuando sea necesario.
+Cuando se crea el contexto de ejecuci´on de idle() se hace de una forma especial:
+no es necesario que tenga un contexto hardware (ya que es la m´ınima infor-
+maci´on que necesita la CPU para volver al modo usuario). Tampoco hay con-
+texto software (ya que es la m´ınima informaci´on que necesita el sistema para
+volver a modo usuario). Lo ´unico que hay en la pila de idle() es la informaci´on
+m´ınima para que se pueda pasar a ejecutar a trav´es de inner_task_switch; ya
+que todos los procesos del sistema pasan a ejecutarse a trav´es de esta funci´on.
+Las dos ´ultimas instrucciones de inner_task_switch son pop ebp y ret. Esto
+significa que en la pila debe haber al menos un ebp y una direcci´on de retorno.
+Sabiendo todo esto, para preparar el contexto de idle(), se va a hacer de forma
+que nunca salte a modo usuario y se pueda poner en funcionamiento a trav´es
+de task_switch:
+
+Figure 17: Esquema del union task_union de idle
+El kernel_esp de idle() va a apuntar a un "fake ebp" (0) y la direcci´on de
+retorno va a ser la de la funci´on cpu idle() que es d´onde se encuentra todo el
+c´odigo de la funci´on idle(). El "fake ebp" es para que el task_switch pueda
+hacer el pop.
+
+##### 3.6.2 init()
+Es el proceso d´onde se salta por primera vez al modo usuario, siendo el primer
+c´odigo de usuario que se va a ejecutar.
+Es parecido a fork() en cuanto a estructura; se le debe asignar un union
+task_union, un pid=1 y se le asigna memoria (tabla de p´aginas que todos los
+dem´as procesos heredan). Para saltar a init() se hace de una forma especial.
+En el boot, se le debe indicar al sistema operativo y el hardware que el proceso
+actual a ejecutar es init(). Para hacer esto, se debe indicar que la tabla de
+p´aginas y la pila de sistema a utilizar es la de init().
+Una vez se ha asignado todo lo que se le debe asignar, se hace un set_cr3(init->dir)
+para indicar que se debe usar la tabla de p´aginas de init() y en los campos
+esp0 de la TSS y en el MSR 0x175 se les pone la pila de sistema de init().
+Cuando se salte a modo usuario, el proceso actual va a ser init(). Es el ´unico
+proceso que no se pone en marcha a trav´es del inner_task_switch.
+
+#### 3.7 Planificaci´on
+Existen tres clases de planificadores:
+• Long term - Decide si el proceso que crea el usuario se puede crear o no
+a partir de los recursos disponibles, la seguridad, etc.
+• Mid term - Es muy complejo. Cuando la m´aquina no est´a saturada (el
+proceso idle() est´a en ejecuci´on) o cuando la m´aquina tiene la memoria
+f´ısica saturada este planificador hace housekeeping. Intenta liberar toda
+la memoria f´ısica (llevandola a disco) para poder ejecutar m´as procesos.
+• Short term - Decide cuando se va a ejecutar un proceso y cu´al es el
+proceso que va a ejecutar a continuaci´on. Multiplexa el tiempo de CPU
+entre todos los procesos y decide cuando se pasa un proceso de Ready a Run.
+El cuando es lo que llamamos pol´ıtica de planificaci´on. El qui´en es el algo-
+ritmo de planificaci´on.
+
+##### 3.7.1 Pol´ıticas y algoritmos de planificaci´on
+No apropiativa
+El sistema operativo no se apropia de la CPU para meter otros procesos. Nor-
+malmente se usa un algoritmo de tipo FIFO o FCFS (First Called First Served).
+Con este algoritmo la cola de ready se ordena por orden de llegada de los pro-
+cesos.
+Esta pol´ıtica funciona muy bien cuando la carga de procesos es muy interac-
+tiva: hay procesos con muchas operaciones de entrada/salida o trabajo con el
+disco. Esto es as´ı porque estos procesos van a cambiar mucho entre los estados
+run y blocked (esperando entrada del usuario, lectura del disco, etc.).
+Si los procesos son mixtos: hay c´alculo con la CPU y entrada/salida o lecturas a
+disco, esta pol´ıtica va muy mal. Los procesos de c´alculo siempre est´an en RUN
+y no abandonan la CPU hasta que acaban. Con esta pol´ıtica y este tipo de
+procesos (mixtos) se da lugar al efecto convoy ya que los procesos interactivos
+o de disco se quedan al final de la cola (a medida que van pasando a blocked)
+y los de c´alculo con CPU al principio.
+Apropiativa diferida
+Se puede tomar la decisi´on de que un proceso en run abandone la CPU y pase
+de run a ready.
+Normalmente se hace uso del algoritmo Round Robin. Se define un quantum
+por proceso que indica cuanto tiempo puede estar un proceso ejecut´andose en
+estado run hasta que el sistema operativo lo saque. El quantum suele ser de
+entre 5 y 8 milisegundos.
+En cada tick de reloj se hace una comprobaci´on para ver si el quantum del
+proceso actual ha expirado. Si esto es as´ı, se saca de run y se mete en ready.
+Si el quantum es demasiado largo (p.e 2s), este Round Robin se va a convertir
+en un FCFS y no nos dar´a ninguna ventaja. Por este motivo los quantums no
+deben ser muy largos. Por otro lado, tampoco pueden ser muy peque˜nos porque,
+sino se har´ıan demasiados task_switch y no ser´ıa ´optimo.
+Pero aparece una nueva necesidad: No todos los procesos son iguales. Un
+proceso de un administrador es m´as importante que el proceso de un usuario
+corriente. Por lo tanto, el proceso del administrador deber´ıa poder entrar antes
+en la CPU sin tener que esperar otros procesos menos importantes.
+Apropiativa immediata
+Permite el paso de run a ready como hemos visto antes, pero a˜nade el paso de
+blocked a ready.
+Imaginamos que un proceso de un administrador entra en la m´aquina (ready)
+y es m´as prioritario que el proceso actual (run). Al de run se le puede sacar a
+ready para poder meter el nuevo proceso m´as prioritario en run.
+Cuando un proceso blocked acaba su espera, se va a mirar si su prioridad es
+mayor que la del proceso en run y, si es as´ı se va a sacar el de run para entrar
+el de blocked.
+Adem´as, cuando entra un nuevo proceso tambi´en se va a mirar si es m´as im-
+portante que el que est´a en run y si es as´ı, se cambia.
+Para esto se necesita un nuevo parametro en la task_struct del proceso: la prioridad.
+Las prioridades pueden ser asignadas de dos formas:
+• Est´atica: Al crear un proceso se le asigna una prioridad y no cambia.
+Esto puede llevar a una situaci´on de starvation; d´onde un proceso de
+baja prioridad nunca entra en la CPU porque van llegando nuevos procesos
+de m´as prioridad.
+• Din´amica: El proceso tiene una prioridad inicial que puede cambiar du-
+rante su ejecuci´on. Si ese proceso lleva mucho tiempo en ready se le
+ir´a subiendo poco a poco la prioridad (aging) hasta que antes o despu´es
+acabar´a entrando en run.
+Para esto, en la interrupci´on de reloj, se mira la cola de ready para ir
+incrementando las prioridades de esos procesos.
+Los sistemas actuales incluyen una mezcla de todo: quantum, round robin y si
+hay empate FCFS.
+¿C´omo se implementa?
+En un Sistema Operativo actual, no hay una sola cola de ready. Hay colas
+multinivel; varias colas de ready seg´un la prioridad y el planificador mira estas
+colas para tomar la decisi´on de qu´e proceso se va a ejecutar. Cada una de las
+colas implementa:
+• Colas menos prioritarias: Procesos interactivos con mucha E/S -¿
+FCFS. Si un proceso tiene mucha prioridad pero requiere mucha E/S el
+sistema operativo va a bajar la prioridad hasta que se ejecuten con FCFS
+ya que sabemos que van a estar abandonando la CPU constantemente.
+• Prioridades altas: Round Robin con quantum. Son procesos intensos
+en CPU normalmente.
+• Intermedios: Round Robin con quantum m´as bajo. Se les van subiendo
+y bajando las prioridades dependiendo de sus caracter´ısticas.
+Estas colas se extienden a lo que se llama colas multinivel retroalimentadas.
+Esto significa que hay prioridades din´amicas y los procesos al salir de la CPU
+van a una cola u otra; la CPU va tomando estad´ısticas y seg´un lo que ve decide
+una cosa u otra de forma din´amica.
+
+#### 3.8 Threads
+Hasta ahora, los procesos son lo que realmente se ejecuta. Este modelo es
+bastante limitante. Muchas veces, los procesos van a ser cooperativos y van
+a necesitar compartir informaci´on entre ellos. Con lo explicado hasta ahora,
+para compartir informaci´on, los procesos deben recurrir al sistema operativo;
+los procesos no comparten memoria, pero comparten el sistema de ficheros.
+El sistema operativo ofrece mecanismos, como las pipes, para poder pasar in-
+formaic´on de un proceso a otro.
+Pasar la informaci´on a trav´es del sistema operativo no es eficiente y introduce
+bastante overhead en la ejecuci´on de los procesos, porque si se quiere enviar
+informaci´on entre procesos no queda otro remedio que hacer una llamada al
+sistema (pipe), el sistema la procesa y se la pasa al otro proceso cuando este
+hace un read. Esto no es eficiente.
+Por esta raz´on se crean los threads. Los threads pertenecen a un proceso y
+comparten todos los recursos del proceso entre ellos. Los threads son los que
+ejecutan las llamadas al sistema para pedir recursos. Pero estos recursos no se
+asignan a un thread, sino que se asignan al proceso al que pertenece el thread.
+A partir de ahora un proceso es un contenedor de recursos y el planificador
+ahora planifica threads de procesos.
+Gracias a esto, todo el movimiento de un proceso a otro desaparece porque
+comparten los recursos. Ya no se comunican con pipes, sino que lo hacen a
+trav´es de la memoria del proceso. Los threads no pueden mover a otro proceso.
+Lo que nos tenemos que plantear en este punto es ¿c´omo impactan los
+threads en los servicios que se tienen en el sistema operativo y qu´e
+modificaciones se deben hacer?
+Informaci´on necesaria para la ejecuci´on de un thread
+En Linux el proceso "deja de ser real": realmente el proceso no est´a guardado
+en ninguna estructura; el task_union que se estaba utilizando para guardar los
+datos del proceso pasa a ser del thread. La informaci´on del thread se utiliza
+el task_union, d´onde hay el task_struct del thread y la pila del thread ya
+que lo que se ejecuta ahora es el thread.
+En Windows dentro del PCB del proceso hay una lista de los TCB (Thread
+Control Block) que son la informaci´on de cada uno de los threads de un proceso.
+El thread debe tener un TID (Thread Identifier); en Linux este atributo es
+´unico en el sistema. Esto es debido a que no existe realmente el proceso, todo
+son threads deben tener un identificador global. En Windows los TID son
+locales la proceso, el TID dentro del proceso es ´unico, pero se puede repetir en
+otro proceso. Para identificar un thread de forma global en Windows se usa el
+PID.TID (Identificador del proceso y identificador del thread).
+Cada thread debe tener una pila de sistema y una pila de usuario. Tami´en es
+propio de cada thread la variable errno ya que ahora es el thread que ejecuta
+las llamadas al sistema. Cada thread va a tener un contexto de ejecuci´on
+propio. Por ´ultimo los threads tienen lo que llamamos TLD (Thread Local
+Storage), d´onde se van a guardar variables locales de ese thread (por ejemplo el errno).
+Como en Linux el proceso no existe y son los threads los que tienen el task_union,
+el planificador no se debe modificar porque ya se usaban los task_union
+para moverlos entre los distintos estados. Ahora en vez de task_union de pro-
+cesos ser´an de threads.
+Por otro lado en Windows, como tenemos una estructura a dos niveles, se
+debe hacer una planificaci´on a dos niveles: primero planifica threads y luego
+procesos. El planificador siempre va a intentar que el siguiente thread que
+se ejecute pertenezca al mismo proceso que el current(). Esto es una opti-
+mizaci´on porque, en el inner_task_switch una de las cosas menos eficientes es
+el set_cr3 ya que hace un flush del TLB; esto significa que al meter un nuevo
+proceso en CPU se va a hacer un flush. Para evitar esto, si se hace un cambio
+a otro thread del mismo proceso no se debe hacer el flush del TLB. Por esto
+siempre se intenta cambiar por un thread del mismo proceso. Pero, cuando
+el proceso tenga que abandonar la CPU para dejar ejecucion a otro proceso o
+porque ha acabado, es cuando se usa el segundo nivel para seleccionar un thread
+de otro proceso.
+Como no se debe alocatar memoria, la creaci´on de threads es muy r´apida. Para
+eliminarlos tambi´en es muy r´apido, solo se debe eliminar el PCB o el task_union
+correspondiente (o el TCB en Windows). Si se mata el thread principal, s´ı se
+deber´a liberar la memoria.
+
+##### 3.8.1 Race conditions
+0 while(pos<N){
+1 data[pos] = datos;
+2 pos++;
+3 }
+Un problema que surje a ra´ıd de la compartici´on de datos entre los threads son
+las race conditions.
+Se puede dar el caso en el que, entre una instrucci´on y otra de un thread el
+planificador lo intercambie por otro thread.
+Imaginemos que el c´odigo de arriba, que inicializa un vector, se ejecuta usando
+varios threads. Como no se puede saber cu´ando el planificador va a sacar un
+thread de la CPU podr´ıa pasar que el planificador sacara un thread justo antes
+de ejecutar la l´ınea 2. Ahora el thread 2 ejecuta este mismo c´odigo y lo que va
+a hacer es machacar los datos del thread 1 y aumentar pos. Cuando vuelva a
+ser ejecutado thread 1, este se qued´o en la l´ınea 2 del c´odigo, por lo que ahora
+va a ejecutarla: incrementa la variable pos sin hacer nada con los datos dejando
+una posici´on del vector vac´ıa. La inicializaci´on no est´a siendo correcta y va a
+tener espacios vac´ıos.
+La compartici´on de los datos de variables globales compartidas entre threads
+provoca que la ejecuci´on de los programas no tenga los resultados esperados.
+Para solucionarlo, se deben detectar estas secciones de c´odigo y modific´andolas
+manualmente (no existen formas autom´aticas) para que se ejecuten en ex-
+clusi´on mutua (de forma at´omica). El planificador a´un puede sacar el proceso
+de la CPU, pero la exclusi´on mutua garantiza que ning´un otro thread va a entrar
+en ese segmento de c´odigo hasta que el thread que lo tiene acabe.
+Mecanismos de exclusi´on mutua
+El mecanismo que ofrece el sistema operativo para marcar zonas de exclusi´on
+mutua son los sem´aforos. El sem´aforo es una estructura bastante simple:
+struct sem_t{
+int count;
+list_head blocked;
+}
+En la estructura list head es d´onde se van a bloquear todos los threads que
+est´an esperando para entrar dentro de la zona de exclusi´on mutua (para que no
+est´en en la cola de ready y el planificador no los pueda poner a ejecutar).
+Las llamadas al sistema deshabilitan las interrupciones. Sin la interrupci´on de
+reloj el planificador no se ejecuta, por lo que una llamada al sistema no puede
+ser interrumpida. Por ese motivo, los mecanismos para trabajar con estas
+zonas de exclusi´on son llamadas al sistema.
+sem_init()
+Esta llamada de inicializaci´on de un sem´aforo recibe como par´ametros un pun-
+tero a un sem´aforo (sem_t *s) y un valor inicial del contador. Sencillamente lo
+que hace es inicializar el contador con el valor que se le pasa e inicializa la lista
+para que sea una lista vac´ıa:
+sem_init(sem_t *s, int count){
+s -> count = count;
+INIT_LIST_HEAD(&s->blocked);
+}
+sem_wait()
+Esta llamada sirve para marcar el inicio de una zona de exclusi´on mutua. Con
+esta llamada se indica que se ha entrado dentro de una zona de exclusi´on mutua
+y que ning´un otro thread puede entrar.
+En caso de que ya haya un thread ejecutando esta zona, se va a bloquear a la
+espera de poder entrar en la zona de este sem´aforo.
+int sem_wait(sem_t * s){
+s -> count--;
+if(s->count < 0){
+list_add_tail(&current()->list, &s->blocked);
+sched_next();
+}
+}
+Si el contador es menor que 0 significa que el proceso se debe bloquear. Para
+bloquearse se a˜nade el mismo a la cola del sem´aforo (blocked) y a continuaci´on
+llama al planificador para que ejecute otro thread.
+sem_post()
+Marca el final de las zonas de exclusi´on mutua. Incrementa el valor del contador
+y si este valor es menor o igual a cero, significa que hay otro thread esperando
+a entrar, as´ı que lo que se hace es sacar el primero de la cola del sem´aforo
+(blocked) y se a˜nade a la cola de ready.
+sem_post(sem_t * s)
+{
+s->count++;
+if(s->count <= 0){
+list_head *l = list_first(&(s->blocked));
+list_del(l);
+list_add_tail(l, &ready_queue);
+}
+}
+Tomando de nuevo el ejemplo de la inicializaci´on de un vector que hemos visto
+al principio, usando sem´aforos quedar´ıa de la siguiente forma:
+int v[10^10];
+int pos;
+sem_t s;
+sem_init(&s, 1);
+sem_wait(&s);
+v[pos] = data;
+pos++;
+sem_post(&s);
+¿Y si se inicializa el contador del sem´aforo en sem_init() con un valor
+de 0? Si se hace esto, como el sem_wait() lo primero que hace es decrementar el
+contador, lo que pasar´ıa es que nunca entrar´ıa ning´un thread a ejecutar la zona
+de exclusi´on y quedar´ıan todos bloqueados. Esto se usa para crear sem´aforos
+que van a servir para sincronizar threads; en concreto para secuencializar el
+orden de ejecuci´on de instrucciones de dos threads.
+Si tenemos dos threads T1 y T2 d´onde T2 consume datos que genera T1, no se
+puede permitir que las instrucciones de T2 se ejecuten antes que las de T1. T2
+debe ejecutarse cuando ya existan los datos que ha generado T1. En este caso,
+se necesita sincronizaci´on: los threads se deben ejecutar de forma secuencial
+(primero T1 y despu´es T2).
+T2 debe esperar en el caso que la ´ultima instrucci´on de T1 no se haya ejecutado
+a´un.
+
+Figure 18: Sincronizaci´on de threads con sem´aforos.
+Para hacer esto, se usa un sem_wait() con un sem´aforo con el contador a 0 al
+inicio de las instrucciones de T2. En T1 no se pone ning´un sem_wait(), pero al
+final de la ejecuci´on de T1, despu´es de ejecutarse la ´ultima instrucci´on habr´a un
+sem_post(). Este sem_post() desbloquear´a a T2 para que se siga ejecutando.
+
+## 10. Desarrollo Detallado del Proyecto Q2 2024-2025 SOA
+
+1.  **Objetivo General del Proyecto**
+    El objetivo principal es mejorar el sistema operativo ZeOS para que sea capaz de soportar la ejecución de un videojuego interactivo. Actualmente, ZeOS carece de las funcionalidades necesarias para manejar eficientemente la entrada de teclado en tiempo real, la salida gráfica para los frames del juego, y la concurrencia requerida para la lógica del juego. El Pajuelo sugiere implementar un juego tipo Pac-Man, pero deja abierta la posibilidad de crear otros juegos como Snake o Arkanoid, o cualquier otro que demuestre las capacidades añadidas. Lo fundamental no es el juego en sí, sino crear el soporte necesario dentro del sistema operativo para que este tipo de aplicaciones sean posibles.
+
+2.  **Arquitectura Requerida para el Videojuego**
+    Independientemente del juego específico que se decida implementar, este debe seguir una arquitectura basada en dos threads (hilos) que trabajen de forma concurrente:
+
+    *   **Thread 1: Gestión de Entrada y Estado del Jugador:**
+        *   Responsable de leer el estado del teclado para determinar las acciones del jugador.
+        *   Actualiza el estado del juego en base a la entrada del teclado (ej: mover a Pac-Man).
+        *   Debe usar la llamada `pause` para bloquearse durante un breve periodo después de cada lectura, evitando así consumir el 100% de la CPU mientras espera la siguiente interacción.
+    *   **Thread 2: Lógica del Juego y Renderizado:**
+        *   Gestiona el movimiento de elementos autónomos (ej: fantasmas, pelota de Arkanoid) y otras lógicas del juego.
+        *   Calcula el estado final del frame a mostrar.
+        *   Dibuja el frame resultante en la pantalla.
+    *   **Exclusión Mutua:** Dado que ambos threads probablemente necesitarán acceder y modificar datos compartidos (por ejemplo, la posición de Pac-Man, el estado del tablero), es imprescindible utilizar mecanismos de exclusión mutua (semáforos, que se implementarán en el Milestone 4) para garantizar la integridad de los datos y evitar condiciones de carrera.
+    *   **Pantalla y Estadísticas:**
+        *   La pantalla en ZeOS se considera una matriz de 80 columnas por 25 filas. Se debe revisar cómo funciona `printc` para entender el acceso a la memoria de vídeo.
+        *   Es necesario mostrar estadísticas de rendimiento, concretamente los frames por segundo (FPS), en la línea superior de la pantalla.
+
+3.  **Milestone 1: Soporte de Teclado (2 puntos)**
+    Este milestone se centra en permitir que los programas de usuario puedan leer el estado del teclado de forma eficiente.
+
+    *   **Modificación de la Interrupción de Teclado:**
+        *   La rutina actual de interrupción de teclado simplemente muestra la tecla pulsada.
+        *   Se debe modificar esta rutina para que, en lugar de (o además de) imprimir, actualice un buffer de estado del teclado mantenido por el kernel. Este buffer (un array) debe tener una entrada por cada tecla posible (tantas como `charmap`), indicando si está pulsada (1) o no (0) en ese momento. La interrupción actualizará este buffer cada vez que se pulse o libere una tecla.
+    *   **Syscall `GetKeyboardState(char *keyboard)`:**
+        *   **Propósito:** Permitir al proceso de usuario obtener el estado actual de todas las teclas.
+        *   **Funcionamiento:** Copia el contenido del buffer de estado del kernel (mantenido por la rutina de interrupción) al buffer `keyboard` proporcionado por el proceso de usuario. El buffer de usuario debe estar prealocado.
+        *   **Características:** Es una llamada no bloqueante. Devuelve 0 si la operación fue exitosa, o -1 (u otro código de error negativo) si hubo un problema (ej: buffer de usuario inválido).
+    *   **Syscall `pause(int milliseconds)`:**
+        *   **Propósito:** Bloquear temporalmente el thread que la invoca. Esto es esencial para el thread que lee el teclado, para que no esté constantemente preguntando por el estado (`GetKeyboardState`) y consumiendo CPU.
+        *   **Funcionamiento:** El thread que llama a `pause` se pone en estado `BLOCKED` durante (aproximadamente) el número de milisegundos especificado. Una vez transcurrido el tiempo, el planificador lo devolverá al estado `READY`.
+        *   **Precisión:** El reloj del sistema en ZeOS genera interrupciones unas 18 veces por segundo (cada 5.56ms aprox.). La llamada `pause` no podrá ser más precisa que esta granularidad. Si se pide `pause(10)`, el bloqueo durará probablemente 2 ticks de reloj (≈11.1ms), pero esta aproximación es suficiente para el propósito del juego. Devuelve 0 si fue exitosa.
+
+4.  **Milestone 2: Soporte de Pantalla (2 puntos)**
+    El objetivo es proporcionar un mecanismo para que los procesos de usuario puedan dibujar gráficos (o caracteres en modo texto) en la pantalla de forma eficiente.
+
+    *   **Memoria de Vídeo:**
+        *   La memoria física donde reside el contenido de la pantalla en modo texto comienza en la dirección `0xB8000`.
+        *   Está organizada como una matriz de 80 columnas x 25 filas.
+        *   Cada celda de la matriz ocupa 2 bytes: el primer byte es el código ASCII del carácter y el segundo byte contiene los atributos (4 bits color de fondo, 4 bits color de letra).
+        *   Normalmente, solo el kernel (código en nivel de privilegio 0) puede escribir directamente en esta zona de memoria. La función `printk` lo hace.
+    *   **Syscall `StartScreen()`:**
+        *   **Propósito:** Establecer un mecanismo para que el proceso pueda dibujar.
+        *   **Funcionamiento:**
+            *   El kernel busca una página física libre.
+            *   Mapea esta página física a una dirección lógica dentro del espacio de direcciones del proceso que realizó la llamada. El algoritmo para elegir la página lógica es "first-free".
+            *   Devuelve al proceso la dirección lógica de esta página mapeada. Si no se puede asignar la página, devuelve un error (ej: `(void*)-1`).
+            *   El kernel también guarda una referencia a esta página física asociada al proceso. Un proceso solo puede tener una página de este tipo.
+    *   **Mecanismo de Dibujado:**
+        *   El proceso de usuario ahora escribe el contenido del frame que quiere mostrar directamente en la memoria a partir de la dirección lógica que le devolvió `StartScreen`. Escribir en esta página lógica es, en efecto, escribir en la página física compartida.
+        *   La rutina de interrupción del reloj del kernel (`clock_routine`), que se ejecuta periódicamente (18 veces/seg), realiza la siguiente acción en cada tick:
+            *   Identifica qué proceso está actualmente en ejecución (`current()`).
+            *   Comprueba si este proceso ha llamado previamente a `StartScreen` (es decir, si tiene una página física compartida asociada).
+            *   Si la tiene, el kernel copia el contenido completo de esa página física compartida a la memoria de vídeo real (`0xB8000`).
+        *   **Resultado:** El contenido que el usuario escribe en su página lógica aparece en pantalla, actualizado a la frecuencia del reloj del sistema (≈18 FPS teóricos máximos debidos a este mecanismo).
+    *   **Concurrencia:** Si varios procesos llaman a `StartScreen`, cada uno tendrá su propia página compartida. Sin embargo, en cada tick de reloj, solo se vuelca a la pantalla el contenido del proceso que esté en ejecución en ese instante. Si hay un cambio de contexto, la pantalla cambiará para mostrar lo que el nuevo proceso tenga en su buffer.
+
+5.  **Milestone 3: Soporte de Threads (2 puntos)**
+    Este es un milestone crucial que introduce el concepto de threads en ZeOS, cambiando fundamentalmente el modelo de ejecución.
+
+    *   **Motivación:**
+        *   Los procesos tienen espacios de memoria separados. La comunicación entre ellos (IPC) requiere pasar por el kernel (ej: pipes, sockets), lo cual es lento e introduce sobrecarga (overhead).
+        *   Para tareas cooperativas (como un videojuego donde diferentes componentes deben interactuar rápidamente), se necesita un paralelismo más eficiente.
+        *   Los threads ofrecen esta eficiencia. Múltiples threads pueden existir dentro de un mismo proceso, compartiendo sus recursos, especialmente la memoria. Esto permite una comunicación muy rápida (simplemente escribiendo/leyendo en memoria compartida) sin involucrar al kernel.
+    *   **Nuevo Paradigma:**
+        *   El **Proceso** se convierte en un contenedor de recursos (memoria, descriptores de fichero, etc.). Ya no es la unidad que se ejecuta directamente.
+        *   El **Thread** se convierte en la unidad mínima de planificación y ejecución. El planificador (scheduler) ahora gestionará y alternará la ejecución de threads.
+        *   Cuando un thread pide un recurso (ej: memoria con `malloc`, un fichero con `open`), el recurso se asigna al proceso al que pertenece el thread.
+    *   **Implementación (Estilo Linux):**
+        *   **Abstracción de Procesos:** ZeOS adoptará un enfoque similar a Linux donde no existe una estructura de datos separada para el "proceso". La estructura que antes representaba un proceso (`task_union` conteniendo `task_struct`) ahora representará un thread. La noción de "proceso" emerge de un grupo de threads que comparten ciertos recursos críticos, como el directorio de páginas de memoria, logrado a través del mecanismo de creación.
+        *   **Información del Thread:** Cada `task_struct` (ahora de thread) necesitará:
+            *   Identificador único (TID, que en este modelo será global como el PID anterior).
+            *   Pila de sistema (ya contenida en `task_union`).
+            *   Pila de usuario (necesita ser gestionada).
+            *   Contexto de ejecución (registros, guardados en la pila de sistema durante cambios de contexto/interrupciones).
+            *   Puntero al directorio de páginas (compartido por threads del mismo "proceso").
+            *   Almacenamiento Local del Thread (TLS): Un espacio para variables propias del thread, como `errno`.
+    *   **Syscall `clone` (Reemplaza a `sys_fork`):**
+        *   **Firma:** `int clone(int what, void *(*func)(void*), void *param, int stack_size);`.
+        *   **Parámetro `what`:** Indica si se crea un "proceso" (`CLONE_PROCESS`) o un "thread" (`CLONE_THREAD`).
+        *   **Parámetros `func`, `param`, `stack_size`:** Solo relevantes para `CLONE_THREAD`. `func` es la dirección de la función que el nuevo thread comenzará a ejecutar. `param` es el argumento que se pasará a `func`. `stack_size` especifica el tamaño requerido para la pila de usuario del nuevo thread.
+        *   **Mecanismo Interno:**
+            *   Obtener `task_union` libre: Igual que en `fork`.
+            *   Copiar `task_union` del creador: `copy_data(current(), new_thread, ...)`. Esto es clave: si se crea un thread (`CLONE_THREAD`), esta copia hace que se comparta el puntero al directorio de páginas (`dir_pages_baseAddr`), la tabla de ficheros, etc., formando así parte del mismo "proceso". Si se crea un "proceso" (`CLONE_PROCESS`), la lógica sería similar a `fork`, creando copias separadas de ciertos recursos como la tabla de páginas.
+            *   Asignar TID: Dar un identificador único al nuevo thread.
+            *   Preparar Contexto de Ejecución (para `CLONE_THREAD`):
+                *   Asignar espacio para la pila de usuario del nuevo thread (basado en `stack_size`).
+                *   En la pila de usuario recién asignada, construir el frame de activación para la llamada `func(param)`. Esto implica empilar el parámetro `param` y una dirección de retorno (puede ser una función de salida del thread o nula si `func` no debe retornar).
+                *   Modificar la pila de sistema del nuevo thread (que es una copia de la del creador). Específicamente, se deben sobrescribir los valores guardados de EIP y ESP de usuario que `iret` restaurará. El EIP guardado (`@ handler` en la pila) debe apuntar ahora a la dirección de `func`. El ESP guardado debe apuntar a la cima del frame de activación recién creado en la pila de usuario.
+                *   Actualizar el puntero `register_esp` en el `task_struct` del nuevo thread para que apunte a la cima actual de su pila de sistema (modificada para el `ret_from_fork` o similar).
+            *   Añadir a `readyqueue`: Poner el nuevo thread en la cola de listos.
+        *   **Wrappers:** Se deben mantener las funciones de biblioteca `fork()` y una nueva `pthread_create()` (o nombre similar). `fork()` llamará a `sys_clone` con `CLONE_PROCESS`. `pthread_create()` llamará a `sys_clone` con `CLONE_THREAD` y los parámetros `func`, `param`, `stack_size` correspondientes.
+    *   **Planificación con Prioridades y Apropiación Inmediata:**
+        *   **Syscall `SetPriority(int priority)`:** Permite al thread actual establecer su propia prioridad. Un valor numérico más alto indica mayor prioridad. Se debe añadir un campo para almacenar la prioridad en `task_struct`.
+        *   **Modificación del Planificador:** El planificador debe implementar apropiación inmediata (preemptive scheduling based on priority).
+        *   **¿Cuándo verificar?:** La necesidad de replanificar por prioridad debe comprobarse cuando:
+            *   Un thread pasa de `BLOCKED` a `READY` (ej: al terminar `pause` o `sem_wait`).
+            *   Se crea un nuevo thread con `clone`.
+            *   El thread actual cambia su prioridad con `SetPriority`.
+            *   (Opcional, pero común) Al final de un tick de reloj si se implementa time-slicing basado en prioridad.
+        *   **Lógica:** Si un thread (T_new) que acaba de pasar a `READY` (o se acaba de crear) tiene una prioridad estrictamente mayor que la del thread actualmente en `RUN` (T_run), entonces:
+            *   T_run es interrumpido inmediatamente (se le quita la CPU).
+            *   Se cambia el estado de T_run a `READY` y se encola en `readyqueue`.
+            *   T_new pasa directamente al estado `RUN` y obtiene la CPU.
+            *   Si T_new no tiene mayor prioridad, simplemente se añade a `readyqueue` como antes.
+
+6.  **Milestone 4: Soporte de Semáforos (2 puntos)**
+    Introduce primitivas para la sincronización y exclusión mutua, esenciales para la programación concurrente con threads.
+
+    *   **Necesidad: Condiciones de Carrera (Race Conditions)**
+        *   Cuando múltiples threads acceden y modifican datos compartidos sin coordinación, el resultado final puede depender del orden exacto (no determinista) en que se intercalan sus instrucciones.
+        *   **Ejemplo Clásico:** Dos threads (T1, T2) ejecutan `A++` sobre una variable compartida `A` (inicialmente 0). La operación `A++` se compila típicamente en varias instrucciones ensamblador (leer `A` en registro, incrementar registro, escribir registro en `A`). Si T1 lee `A` (0), y antes de que escriba el 1, el planificador cambia a T2, T2 también leerá `A` (0), incrementará a 1 y escribirá 1. Cuando T1 vuelva a ejecutarse, escribirá el 1 que tenía en su registro. Resultado final: `A=1`, en lugar del esperado `A=2`.
+        *   La solución es asegurar que la secuencia de instrucciones que accede/modifica el dato compartido (la **sección crítica**) se ejecute atómicamente respecto a otros threads que accedan al mismo dato, es decir, en **exclusión mutua**. El programador debe identificar estas secciones críticas.
+    *   **Semáforos:**
+        *   Son un mecanismo ofrecido por el kernel para implementar la exclusión mutua.
+        *   **Estructura Interna:** Un semáforo gestionado por el kernel consiste fundamentalmente en:
+            *   Un contador entero.
+            *   Una cola donde pueden esperar los threads que intentan acceder al recurso protegido por el semáforo y lo encuentran ocupado.
+        *   **Operaciones (Syscalls - Locales al Proceso):**
+            *   `int sem_init(int value)`:
+                *   Crea una nueva instancia de semáforo en el kernel, asociada al proceso actual.
+                *   Inicializa el contador interno con el `value` proporcionado. Para exclusión mutua simple (permitir solo un thread a la vez), `value` típicamente es 1.
+                *   Inicializa la cola de bloqueados como vacía.
+                *   Devuelve un identificador entero (`sem_id`) único (dentro del proceso) que se usará para referirse a este semáforo en las otras llamadas.
+            *   `int sem_wait(int sem_id)` (También conocido como P, down, acquire):
+                *   Intenta entrar en la sección crítica protegida por el semáforo `sem_id`.
+                *   Decrementa el contador del semáforo.
+                *   Comprueba el nuevo valor del contador:
+                    *   Si es `>= 0`: El recurso está disponible. El thread continúa y entra en la sección crítica.
+                    *   Si es `< 0`: El recurso no está disponible (otro thread ya está en la sección crítica). El thread actual se bloquea. Para ello:
+                        *   Se añade el `task_struct` del thread actual a la cola de bloqueados del semáforo.
+                        *   Se cambia el estado del thread a `BLOCKED`.
+                        *   Se invoca al planificador (`sched_next_rr()`) para ceder la CPU a otro thread. El thread no continuará hasta que sea despertado por un `sem_post`.
+            *   `int sem_post(int sem_id)` (También conocido como V, up, signal, release):
+                *   Señala que el thread ha salido de la sección crítica protegida por `sem_id`.
+                *   Incrementa el contador del semáforo.
+                *   Comprueba el nuevo valor del contador:
+                    *   Si es `> 0`: No había nadie esperando, simplemente se ha incrementado la disponibilidad del recurso.
+                    *   Si es `<= 0`: Había al menos un thread esperando en la cola del semáforo. El kernel debe despertar a uno de ellos:
+                        *   Se saca el primer thread de la cola de bloqueados del semáforo.
+                        *   Se cambia su estado a `READY`.
+                        *   Se añade a la `readyqueue` para que el planificador lo considere.
+            *   `int sem_destroy(int sem_id)`:
+                *   Libera los recursos asociados al semáforo `sem_id` en el kernel. Se debe asegurar que no haya threads bloqueados en él cuando se destruye.
+    *   **Uso Típico (Exclusión Mutua):**
+        ```
+        // Inicialización (una sola vez)
+        int mutex_sem = sem_init(1);
+
+        // ... en el código de cada thread que necesita acceder al recurso ...
+        sem_wait(mutex_sem); // Intentar entrar: bloquearse si está ocupado
+        // --- Inicio de la Sección Crítica ---
+        // Acceder/modificar datos compartidos aquí
+        // v[pos] = dato; pos++;
+        // --- Fin de la Sección Crítica ---
+        sem_post(mutex_sem); // Salir y despertar a un posible thread en espera
+        ```
+
+7.  **Milestone 5: Videojuego Funcional (2 puntos)**
+    Este es el milestone final donde se integran todas las piezas anteriores para crear la aplicación de usuario: el videojuego.
+
+    *   **Implementación del Juego:**
+        *   Elegir un juego (Pac-Man, Snake, Arkanoid, u otro).
+        *   Implementar la lógica del juego elegida.
+    *   **Utilización de las Nuevas Funcionalidades de ZeOS:**
+        *   Arquitectura de 2 Threads: El juego debe estructurarse obligatoriamente con los dos threads descritos: uno para entrada/estado y otro para lógica/renderizado.
+        *   Entrada: Usar `GetKeyboardState` para leer el teclado y `pause` para evitar el busy-waiting en el thread de entrada.
+        *   Salida: Usar `StartScreen` para obtener el buffer de pantalla y escribir los frames en él desde el thread de renderizado.
+        *   Sincronización: Usar `sem_init`, `sem_wait`, `sem_post` para proteger cualquier acceso a datos compartidos entre los dos threads (ej: posición del jugador, estado del tablero).
+        *   Estadísticas: Calcular y mostrar los FPS en la parte superior de la pantalla.
+    *   **Pruebas:** Es fundamental probar exhaustivamente no solo el juego, sino también la correcta funcionalidad de todas las llamadas al sistema implementadas en los milestones anteriores.
+
+8.  **Evaluación y Logística**
+    *   Orden y Dependencia: Los milestones deben realizarse y entregarse en orden (1 al 5). La evaluación de un milestone requiere que los anteriores sean correctos.
+    *   Feedback Continuo: Se recomienda enviar cada milestone por correo electrónico al Pajuelo para validación (ok / no ok con explicación) antes de continuar con el siguiente. Esto asegura los puntos y evita problemas posteriores.
+    *   Entrega Final: Es obligatorio realizar al menos una entrega final en la plataforma Racó. En esta entrega se debe indicar explícitamente hasta qué milestone se ha completado y validado.
+    *   Nota: Cada milestone funcional aporta 2 puntos a la nota final del proyecto. No es necesario completar los 5 milestones para obtener una nota; cada estudiante decide hasta dónde llegar.
+    *   Autonomía y Decisiones: El enunciado no cubre todos los detalles de implementación (ej: números exactos para las syscalls, gestión de errores específicos, qué hacer si `fork` es llamado por un proceso con múltiples threads). Los estudiantes deben tomar decisiones de diseño razonables, buscando información si es necesario (ej: comportamiento estándar en Linux) y justificándolas si se requiere.
+
+Recordaré estas directrices al ayudarte. ¡Estoy listo para empezar cuando quieras!

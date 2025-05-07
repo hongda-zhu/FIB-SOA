@@ -63,7 +63,7 @@ ENTRY(fork)
 	movl $2, %eax
 	call syscall_sysenter
 	test %eax, %eax
-	js nok	// if (eax < 0) -->
+	js nok	// if (eax < 0) -> 
 	popl %ebp
 	ret
 
@@ -155,3 +155,30 @@ ENTRY(StartScreen)
 	call syscall_sysenter
 	popl %ebp
 	ret
+
+
+/* int threadCreate(void(*function)(void* arg), void* parameter) */
+ENTRY(threadCreate)
+	pushl %ebp
+	movl %esp, %ebp
+	pushl %ebx;  // Save EBX, ESI and EDI if modified
+	movl $21, %eax
+	movl 0x8(%ebp), %ebx;	// function
+	movl 0xC(%ebp), %ecx;	// parameter
+	call syscall_sysenter
+	popl %ebx
+	test %eax, %eax
+	js nok	// if (eax < 0) -> 
+	popl %ebp
+	ret
+
+/* void threadExit() */
+ENTRY(threadExit)
+	pushl %ebp
+	movl %esp, %ebp
+	movl $22, %eax
+	call syscall_sysenter
+	popl %ebp
+	ret
+
+

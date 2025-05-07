@@ -13,6 +13,8 @@
 
 #define NR_TASKS      10
 #define KERNEL_STACK_SIZE	1024
+#define CLONE_PROCESS 0
+#define CLONE_THREAD 1
 
 enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
 
@@ -28,13 +30,14 @@ struct task_struct {
   //unsigned int screen_frame; /* Physical frame for screen buffer of this thread */
   void* screen_buffer; /* Start of the screen buffer (logic address)*/
   
-  int TID; /* Thread ID */
-  void* user_stack_sp;
-  int priority;
-  struct list_head threads_list; 
-  struct task_struct* master;
-  int num_threads;
-  struct list_head threads;
+  // Campos nuevos para soporte de threads
+  int TID;                       /* Thread ID */
+  void* user_stack_sp;           /* User stack pointer for the thread */
+  int priority;                  /* Priority for immediate preemption */
+  struct list_head threads_list; /* For linking threads in thread list */
+  struct task_struct* master;    /* Pointer to the master thread/process */
+  int num_threads;               /* Number of threads in this process */
+  struct list_head threads;      /* List of threads belonging to this process */
 };
 
 union task_union {

@@ -8,6 +8,10 @@
 
 #include <stats.h>
 
+
+#define CLONE_PROCESS 0
+#define CLONE_THREAD 1
+
 extern int errno;
 
 int write(int fd, char *buffer, int size);
@@ -20,9 +24,15 @@ void perror();
 
 int getpid();
 
-int fork();
+int fork();  // Mantener para compatibilidad
 
-int clone(int what, void *(*func)(void*), void *param, int stack_size);
+int clone(int what, void *(*func)(void*), void *param, int stack_size);  // Syscall base
+
+int threadCreate(void(*function)(void* arg), void* parameter);  // Wrapper para threads
+
+void threadExit();  // Para finalizar threads
+
+void* wrapper_func(void * (*func) (void *param), void * param);  // Función auxilia
 
 void exit();
 

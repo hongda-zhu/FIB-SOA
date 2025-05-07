@@ -46,3 +46,23 @@
  wrmsr
  pop %ebp
  ret
+
+.globl wrapper_func; .type wrapper_func, @function; .align 0; wrapper_func:
+ pushl %ebp
+ movl %esp, %ebp
+
+
+ movl 0x8(%ebp), %ebx
+ movl 0xC(%ebp), %ecx
+
+
+ pushl %ecx
+ call *%ebx
+ addl $4, %esp
+
+
+ call sys_threadExit
+
+
+ popl %ebp
+ ret

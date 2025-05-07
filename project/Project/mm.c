@@ -275,3 +275,26 @@ unsigned int get_free_logical_page(page_table_entry* PT, unsigned int start_sear
 		}
 	return -1;
 }
+
+/* find_free_contiguous_pages - Busca un bloque de 'num_pages' páginas consecutivas que están libres en la tabla de páginas.
+ * Devuelve el índice de la primera página del bloque encontrado o -1 si no hay ninguno. */
+unsigned int find_free_contiguous_pages(page_table_entry* PT, int num_pages) {
+    // Buscar desde después de la sección de datos del proceso
+    for (int start = PAG_LOG_INIT_DATA + NUM_PAG_DATA; start <= TOTAL_PAGES - num_pages; start++) {
+        int valid_block = 1;
+        
+        // Verificar que las 'num_pages' páginas consecutivas están libres
+        for (int i = 0; i < num_pages; i++) {
+            if (PT[start + i].bits.present) {
+                valid_block = 0;
+                break;
+            }
+        }
+        
+        if (valid_block) {
+            return start; // Encontramos un bloque válido
+        }
+    }
+    
+    return -1; // No se encontró ningún bloque válido
+}
