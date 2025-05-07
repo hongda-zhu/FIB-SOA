@@ -267,11 +267,18 @@ unsigned int get_frame (page_table_entry *PT, unsigned int logical_page){
      return PT[logical_page].bits.pbase_addr; 
 }
 
+unsigned int has_frame (page_table_entry *PT, unsigned int logical_page){
+	return PT[logical_page].bits.present;
+}
 
-unsigned int get_free_logical_page(page_table_entry* PT, unsigned int start_search) {
-	for (int i = start_search; i < TOTAL_PAGES; i++) 
+unsigned int get_free_logical_pages(page_table_entry* PT, unsigned int start_search, unsigned int contiguous_pages) {
+	int c = 0;
+	for (int i = start_search; i < TOTAL_PAGES; i++) {
 		if (PT[i].bits.present == 0) {
-			return i;
+			++c;
+			if (c == contiguous_pages) return i - contiguous_pages + 1;
 		}
+		else c = 0;
+	}
 	return -1;
 }

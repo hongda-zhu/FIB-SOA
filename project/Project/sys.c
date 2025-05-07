@@ -62,6 +62,7 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 {	
   struct list_head *lhcurrent = NULL;
   union task_union *uchild;
+  int data_pages_copy[NUM_PAG_DATA];
   
   /* Any free task_struct? */
   if (list_empty(&freequeue)) return -ENOMEM;
@@ -75,13 +76,24 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
   /* Copy the parent's task struct to child's */
   copy_data(current(), uchild, sizeof(union task_union));
   
-  page_table_entry *process_PT = get_PT(&uchild->task);
   page_table_entry *parent_PT = get_PT(current());
-  int new_ph_pag, pag, i;
+  int new_ph_pag, pag, i, j;
+  
+  for (i=0; i<NUM_PAG_DATA; i++) { //TODO revert if no memory available or just do it inside
+	/* Map one child page to parent's address space. */
+	pag=NUM_PAG_KERNEL+NUM_PAG_CODE+i;
+	
+	if (has_frame(parent_PT, pag+NUM_PAG_DATA))
+		data_pages_copy[i] = get_frame(parent_PT, pag+NUM_PAG_DATA);
+	else
+		data_pages_copy[i] = -1;
+  }
   
   if (what == 0) {
 	  /* new pages dir */
 	  allocate_DIR((struct task_struct*)uchild);
+	  
+	  page_table_entry *process_PT = get_PT(&uchild->task);
 	  
 	  /* Allocate pages for DATA+STACK */
 	  for (pag=0; pag<NUM_PAG_DATA; pag++)
@@ -106,7 +118,6 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 		  return -EAGAIN; 
 		}
 	  }
-	
 
 	  /* Copy parent's SYSTEM and CODE to child. */
 	  for (pag=0; pag<NUM_PAG_KERNEL; pag++)
@@ -118,9 +129,9 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 		set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
 	  }
 	  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
-	  for (pag=NUM_PAG_KERNEL+NUM_PAG_CODE; pag<NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA; pag++)
-	  {
-		/* Map one child page to parent's address space. */
+	  for (i=0; i<NUM_PAG_DATA; i++)
+	  {	
+		pag=NUM_PAG_KERNEL+NUM_PAG_CODE+i;
 		set_ss_pag(parent_PT, pag+NUM_PAG_DATA, get_frame(process_PT, pag));
 		copy_data((void*)(pag<<12), (void*)((pag+NUM_PAG_DATA)<<12), PAGE_SIZE);
 		del_ss_pag(parent_PT, pag+NUM_PAG_DATA);
@@ -128,7 +139,7 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 	  
 	  if (current()->screen_buffer != NULL) {
 		new_ph_pag=alloc_frame();
-		int alfredo = get_free_logical_page(parent_PT, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
+		int alfredo = get_free_logical_pages(parent_PT, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA, 1);
 		if (new_ph_pag != -1 && alfredo != -1) /* One page allocated */
 		{
 		  set_ss_pag(process_PT, ((int)(current()->screen_buffer))>>12, new_ph_pag);
@@ -153,46 +164,46 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 		}
 	  }
 	  
-	  /* Deny access to the child's memory space */
-	  set_cr3(get_DIR(current()));
-	  
+
   }
   else {
 	  /* copy pages dir */
-	  uchild->dir_pages_baseAddr = current()->dir_pages_baseAddr;
+	  uchild->task.dir_pages_baseAddr = current()->dir_pages_baseAddr;
+	  
+	  /* prepare child user stack with function context */
+	  int required_pags = (stack_size - 1) / 4096 + 1;
+	  
+	  int first_usr_stack_page = get_free_logical_pages(parent_PT, NUM_PAG_KERNEL+NUM_PAG_CODE+2*NUM_PAG_DATA, required_pags);
+	  
+	  for (i = 0; i < required_pags; i++) {
+		  pag = first_usr_stack_page + i;
+		  new_ph_pag = alloc_frame();
+		  set_ss_pag(parent_PT, pag, new_ph_pag);
+	  }
+	  
+	  set_ss_pag(parent_PT, NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA+i, new_ph_pag);
+	  
+	  unsigned long* child_esp = (first_usr_stack_page + required_pags + 1)<<12 | 0xFFE;
+	  
+	  *child_esp = 0; //@ret. podem canviar a apuntar a exit()?
+	  ++child_esp;
+	  *child_esp = param;
+	  --child_esp;
+	  
+	  uchild->stack[KERNEL_STACK_SIZE-2] = child_esp;
   }
   
-
+  /* Deny access to the child's memory space */
+  set_cr3(get_DIR(current()));
+  
+  /* Restore old logical pages after data section*/
+  for (i=0; i<NUM_PAG_DATA; i++) {
+	  if (data_pages_copy[i] != -1)
+		set_ss_pag(parent_PT, NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA+i, data_pages_copy[i]);
+  }
+  
   uchild->task.TID=++global_TID;
-  if (what == 0) {
-	  uchild->task.PID = ++global_PID;
-	  uchild->task.master = &uchild->task;
-	  uchild->task.num_threads = 1;
-	  INIT_LIST_HEAD(&uchild->task.threads);
-	  //list_add_tail(&uchild->task.threads_list, &uchild->threads); //?
-  }
-  else {
-	  uchild->task.master = &current()->task;
-	  current()->num_threads++;
-	  list_add_tail(&uchild->task.threads_list, &current()->threads);
-	  int required_pags = (stack_size - 1) / 4096 + 1;
-	  /*
-	   * Ens hem quedat aqui,
-	   *  falta fer tema de pila d'usuari (veure on va, overwrite de la del parent, pillar physical pages...)
-	   * falta modificar pila sistema per tornar al context de funcio amb parametre
-	   * falten potser modificar coses del task_struct i altres
-	   * */
-	  for (i = 0; i < required_pags; i++) {
-		  new_ph_pag = alloc_frame();
-		  if (new_pg_pag == -1) {
-			  //free ... 
-		  }
-		  
-		  set_ss_pag(process_PT, 
-	  }
-  }
-  uchild->task.state=ST_READY;
-
+  
   int register_ebp;		/* frame pointer */
   /* Map Parent's ebp to child's stack */
   register_ebp = (int) get_ebp();
@@ -201,12 +212,33 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
   uchild->task.register_esp=register_ebp + sizeof(DWord);
 
   DWord temp_ebp=*(DWord*)register_ebp;
-  /* Prepare child stack for context switch */
-  uchild->task.register_esp-=sizeof(DWord);
-  *(DWord*)(uchild->task.register_esp)=(DWord)&ret_from_fork;
-  uchild->task.register_esp-=sizeof(DWord);
-  *(DWord*)(uchild->task.register_esp)=temp_ebp;
-
+  
+  if (what == 0) {
+	  uchild->task.PID = ++global_PID;
+	  uchild->task.master = &uchild->task;
+	  uchild->task.num_threads = 1;
+	  INIT_LIST_HEAD(&uchild->task.threads);
+	  //list_add_tail(&uchild->task.threads_list, &uchild->threads); //?
+	  
+	  /* Prepare child stack for context switch */
+	  uchild->task.register_esp-=sizeof(DWord);
+	  *(DWord*)(uchild->task.register_esp)=(DWord)&ret_from_fork;
+	  uchild->task.register_esp-=sizeof(DWord);
+	  *(DWord*)(uchild->task.register_esp)=temp_ebp;
+  }
+  else {
+	  uchild->task.master = current();
+	  current()->num_threads++;
+	  list_add_tail(&uchild->task.threads_list, &current()->threads);
+	  
+	  /* Prepare child stack for context switch */
+	  uchild->task.register_esp-=sizeof(DWord);
+	  *(DWord*)(uchild->task.register_esp)=(DWord)func;
+	  uchild->task.register_esp-=sizeof(DWord);
+	  *(DWord*)(uchild->task.register_esp)=temp_ebp;
+  }
+  uchild->task.state=ST_READY;
+  
   /* Set stats to 0 */
   init_stats(&(uchild->task.p_stats));
 
@@ -214,7 +246,10 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
   uchild->task.state=ST_READY;
   list_add_tail(&(uchild->task.list), &readyqueue);
   
-  return uchild->task.PID;
+  if (what == 0)
+	return uchild->task.PID;
+  else
+	return uchild->task.TID;
 }
 
 #define TAM_BUFFER 512
@@ -351,7 +386,7 @@ void* sys_StartScreen(void)
 	
 	page_table_entry * pt = get_PT(current());
 	
-	int logic_page = get_free_logical_page(pt, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA);
+	int logic_page = get_free_logical_pages(pt, PAG_LOG_INIT_DATA + 2*NUM_PAG_DATA, 1);
 	if (logic_page == -1) {
 		//couldn't find free logical page (should never happen)
 		free_frame(frame);

@@ -67,8 +67,16 @@ nok:
 .globl fork; .type fork, @function; .align 0; fork:
  pushl %ebp
  movl %esp, %ebp
- movl $2, %eax
+ pushl %ebx;
+ pushl %esi
+ movl $7, %eax
+ movl $0, %ebx;
+ movl -4(%ebp), %ecx;
+ movl $0, %edx;
+ movl $4096, %esi ;
  call syscall_sysenter
+ popl %esi
+ popl %ebx
  test %eax, %eax
  js nok
  popl %ebp
@@ -78,16 +86,9 @@ nok:
 .globl clone; .type clone, @function; .align 0; clone:
  pushl %ebp
  movl %esp, %ebp
- pushl %ebx;
- pushl %esi
  movl $7, %eax
  movl 0x8(%ebp), %ebx;
- movl 0xC(%ebp), %ecx;
- movl 0x10(%ebp), %edx;
- movl 0x14(%ebp), %esi;
  call syscall_sysenter
- popl %esi
- popl %ebx
  test %eax, %eax
  js nok
  popl %ebp

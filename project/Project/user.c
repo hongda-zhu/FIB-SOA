@@ -22,8 +22,10 @@ int __attribute__ ((__section__(".text.main")))
 	char keyboard_state[256];
 	screen_buffer = (char*)StartScreen();
 	if (fork() != 0) {
+		write(1, "fork", 4);
 		exit();
 	}
+	write(1, "boomer", 6);
 	char buff[256];
 	itoa(screen_buffer, buff);
 	write(1, buff, strlen(buff));

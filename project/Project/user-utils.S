@@ -60,8 +60,16 @@ ENTRY(getpid)
 ENTRY(fork)
 	pushl %ebp
 	movl %esp, %ebp
-	movl $2, %eax
+	pushl %ebx;  // Save EBX, ESI and EDI if modified
+	pushl %esi
+	movl $7, %eax
+	movl $0, %ebx;	//what = 0
+	movl -4(%ebp), %ecx; //*func = @ret = %ebp+4
+	movl $0, %edx;	//*param = nothing
+	movl $4096, %esi ;  //stack_size = 1 pag?
 	call syscall_sysenter
+	popl %esi
+	popl %ebx
 	test %eax, %eax
 	js nok	// if (eax < 0) -->
 	popl %ebp
@@ -71,16 +79,9 @@ ENTRY(fork)
 ENTRY(clone)
 	pushl %ebp
 	movl %esp, %ebp
-	pushl %ebx;  // Save EBX, ESI and EDI if modified
-	pushl %esi
 	movl $7, %eax
 	movl 0x8(%ebp), %ebx;	//what
-	movl 0xC(%ebp), %ecx;	//*func
-	movl 0x10(%ebp), %edx;	//*param
-	movl 0x14(%ebp), %esi;  //stack_size
 	call syscall_sysenter
-	popl %esi
-	popl %ebx
 	test %eax, %eax
 	js nok	// if (eax < 0) -> 
 	popl %ebp

@@ -39,6 +39,6 @@ void set_ss_pag(page_table_entry *PT, unsigned page,unsigned frame);
 void del_ss_pag(page_table_entry *PT, unsigned page);
 unsigned int get_frame(page_table_entry *PT, unsigned int page);
 
-unsigned int get_free_logical_page(page_table_entry* PT, unsigned int start_search);
-
+unsigned int has_frame (page_table_entry *PT, unsigned int logical_page);
+unsigned int get_free_logical_pages(page_table_entry* PT, unsigned int start_search, unsigned int contiguous_pages);
 #endif  /* __MM_H__ */

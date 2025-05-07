@@ -31,7 +31,7 @@
 00000000000i[      ]   SB16 support: no
 00000000000i[      ]   USB support: no
 00000000000i[      ]   VGA extension support: vbe
-00000000000i[MEM0  ] allocated memory at 0x7f894fa8c010. after alignment, vector=0x7f894fa8d000
+00000000000i[MEM0  ] allocated memory at 0x7f5cb5ff5010. after alignment, vector=0x7f5cb5ff6000
 00000000000i[MEM0  ] 16,00MB
 00000000000i[MEM0  ] mem block size = 0x00100000, blocks=16
 00000000000i[MEM0  ] rom at 0xfffe0000/131072 ('/opt/bochs_gdb/share/bochs/BIOS-bochs-latest')
@@ -41,7 +41,7 @@
 00000000000i[DEV   ] PIIX3 PCI-to-ISA bridge present at device 1, function 0
 00000000000i[PLUGIN] init_dev of 'cmos' plugin device by virtual method
 00000000000i[CMOS  ] Using local time for initial clock
-00000000000i[CMOS  ] Setting initial clock to: Thu May  1 15:37:13 2025 (time0=1746106633)
+00000000000i[CMOS  ] Setting initial clock to: Wed May  7 11:54:12 2025 (time0=1746611652)
 00000000000i[PLUGIN] init_dev of 'dma' plugin device by virtual method
 00000000000i[DMA   ] channel 4 used by cascade
 00000000000i[PLUGIN] init_dev of 'pic' plugin device by virtual method
@@ -195,59 +195,59 @@
 00001500703i[BXVGA ] VBE known Display Interface b0c0
 00001500735i[BXVGA ] VBE known Display Interface b0c5
 00001503660i[VBIOS ] VBE Bios $Id: vbe.c,v 1.65 2014/07/08 18:02:25 vruppert Exp $
-00114168076i[XGUI  ] charmap update. Font Height is 16
-03632576428i[BIOS  ] Booting from 0000:7c00
-03648624558i[FLOPPY] partial read() on floppy image returns 352/512
-03648669002i[FLOPPY] read() on floppy image returns 0
-03648713446i[FLOPPY] read() on floppy image returns 0
-03648757890i[FLOPPY] read() on floppy image returns 0
-03648802334i[FLOPPY] read() on floppy image returns 0
-03648846778i[FLOPPY] read() on floppy image returns 0
-03648891222i[FLOPPY] read() on floppy image returns 0
-03648935666i[FLOPPY] read() on floppy image returns 0
-03648980110i[FLOPPY] read() on floppy image returns 0
-03649024554i[FLOPPY] read() on floppy image returns 0
-03649068998i[FLOPPY] read() on floppy image returns 0
-03649113442i[FLOPPY] read() on floppy image returns 0
-03649157886i[FLOPPY] read() on floppy image returns 0
-03649202330i[FLOPPY] read() on floppy image returns 0
-03649246774i[FLOPPY] read() on floppy image returns 0
-03649291218i[FLOPPY] read() on floppy image returns 0
-03649335662i[FLOPPY] read() on floppy image returns 0
-03649381859i[FLOPPY] read() on floppy image returns 0
-03649426303i[FLOPPY] read() on floppy image returns 0
-03649470747i[FLOPPY] read() on floppy image returns 0
-03649515191i[FLOPPY] read() on floppy image returns 0
-03649559635i[FLOPPY] read() on floppy image returns 0
-03649604079i[FLOPPY] read() on floppy image returns 0
-03649648523i[FLOPPY] read() on floppy image returns 0
-03772496000i[GDBST ] stopped with ac0
-03772496000i[XGUI  ] Mouse capture off
-03772496000i[XGUI  ] Mouse capture off
-03772496000i[XGUI  ] Mouse capture off
-03772496000i[GDBST ] addr 00000000001000c0 len 40
-03772496000i[XGUI  ] Mouse capture off
-03772496000i[XGUI  ] Mouse capture off
-03772496000p[GDBST ] >>PANIC<< Debugger asked us to quit
-03772496000i[CPU0  ] CPU is in protected mode (active)
-03772496000i[CPU0  ] CS.mode = 32 bit
-03772496000i[CPU0  ] SS.mode = 32 bit
-03772496000i[CPU0  ] EFER   = 0x00000000
-03772496000i[CPU0  ] | EAX=00130000  EBX=00108154  ECX=00623bbb  EDX=000006b4
-03772496000i[CPU0  ] | ESP=0011bed0  EBP=0011bfe8  ESI=cccccccd  EDI=00130000
-03772496000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af PF cf
-03772496000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
-03772496000i[CPU0  ] |  CS:0023( 0004| 0|  3) 00000000 ffffffff 1 1
-03772496000i[CPU0  ] |  DS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
-03772496000i[CPU0  ] |  SS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
-03772496000i[CPU0  ] |  ES:002b( 0005| 0|  3) 00000000 ffffffff 1 1
-03772496000i[CPU0  ] |  FS:0000( 0000| 0|  0) 00000000 00000000 0 0
-03772496000i[CPU0  ] |  GS:0000( 0000| 0|  0) 00000000 00000000 0 0
-03772496000i[CPU0  ] | EIP=001000c1 (001000c1)
-03772496000i[CPU0  ] | CR0=0x80000011 CR2=0x00000000
-03772496000i[CPU0  ] | CR3=0x0002d000 CR4=0x00000000
-03772496000i[CPU0  ] 0x001000c1>> mov byte ptr ds:[eax+edx+1], 0x07 : C644100107
-03772496000i[CMOS  ] Last time is 1746107576 (Thu May  1 15:52:56 2025)
-03772496000i[XGUI  ] Exit
-03772496000i[      ] restoring default signal behavior
-03772496000i[SIM   ] quit_sim called with exit code 1
+00063003156i[XGUI  ] charmap update. Font Height is 16
+02718476038i[BIOS  ] Booting from 0000:7c00
+02734524177i[FLOPPY] partial read() on floppy image returns 364/512
+02734568621i[FLOPPY] read() on floppy image returns 0
+02734613065i[FLOPPY] read() on floppy image returns 0
+02734657509i[FLOPPY] read() on floppy image returns 0
+02734701953i[FLOPPY] read() on floppy image returns 0
+02734746397i[FLOPPY] read() on floppy image returns 0
+02734790841i[FLOPPY] read() on floppy image returns 0
+02734835285i[FLOPPY] read() on floppy image returns 0
+02734879729i[FLOPPY] read() on floppy image returns 0
+02734924173i[FLOPPY] read() on floppy image returns 0
+02734968617i[FLOPPY] read() on floppy image returns 0
+02735013061i[FLOPPY] read() on floppy image returns 0
+02735057505i[FLOPPY] read() on floppy image returns 0
+02735101949i[FLOPPY] read() on floppy image returns 0
+02735146393i[FLOPPY] read() on floppy image returns 0
+02735190837i[FLOPPY] read() on floppy image returns 0
+02735235281i[FLOPPY] read() on floppy image returns 0
+02735281478i[FLOPPY] read() on floppy image returns 0
+02735325922i[FLOPPY] read() on floppy image returns 0
+02735370366i[FLOPPY] read() on floppy image returns 0
+02735414810i[FLOPPY] read() on floppy image returns 0
+02735459254i[FLOPPY] read() on floppy image returns 0
+02735503698i[FLOPPY] read() on floppy image returns 0
+02735548142i[FLOPPY] read() on floppy image returns 0
+02776048000i[GDBST ] stopped with ac0
+02776048000i[XGUI  ] Mouse capture off
+02776048000i[XGUI  ] Mouse capture off
+02776048000i[XGUI  ] Mouse capture off
+02776048000i[GDBST ] addr 00000000001000c0 len 40
+02776048000i[XGUI  ] Mouse capture off
+02776048000i[XGUI  ] Mouse capture off
+02776048000p[GDBST ] >>PANIC<< Debugger asked us to quit
+02776048000i[CPU0  ] CPU is in protected mode (active)
+02776048000i[CPU0  ] CS.mode = 32 bit
+02776048000i[CPU0  ] SS.mode = 32 bit
+02776048000i[CPU0  ] EFER   = 0x00000000
+02776048000i[CPU0  ] | EAX=00000322  EBX=00108160  ECX=00203003  EDX=00000644
+02776048000i[CPU0  ] | ESP=0011bed0  EBP=0011bfe8  ESI=cccccccd  EDI=00130000
+02776048000i[CPU0  ] | IOPL=0 id vip vif ac vm rf nt of df IF tf sf zf af PF cf
+02776048000i[CPU0  ] | SEG sltr(index|ti|rpl)     base    limit G D
+02776048000i[CPU0  ] |  CS:0023( 0004| 0|  3) 00000000 ffffffff 1 1
+02776048000i[CPU0  ] |  DS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+02776048000i[CPU0  ] |  SS:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+02776048000i[CPU0  ] |  ES:002b( 0005| 0|  3) 00000000 ffffffff 1 1
+02776048000i[CPU0  ] |  FS:0000( 0000| 0|  0) 00000000 00000000 0 0
+02776048000i[CPU0  ] |  GS:0000( 0000| 0|  0) 00000000 00000000 0 0
+02776048000i[CPU0  ] | EIP=001000cf (001000cf)
+02776048000i[CPU0  ] | CR0=0x80000011 CR2=0x00000000
+02776048000i[CPU0  ] | CR3=0x0002d000 CR4=0x00000000
+02776048000i[CPU0  ] 0x001000cf>> mov byte ptr ds:[edi+eax*2], 0x20 : C6044720
+02776048000i[CMOS  ] Last time is 1746612346 (Wed May  7 12:05:46 2025)
+02776048000i[XGUI  ] Exit
+02776048000i[      ] restoring default signal behavior
+02776048000i[SIM   ] quit_sim called with exit code 1
