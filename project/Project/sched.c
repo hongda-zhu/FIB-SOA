@@ -231,7 +231,15 @@ void init_task1(void)
   
   c->priority = 0;
 
+  c->master = c;
+
   remaining_quantum=c->total_quantum;
+
+  for (int i = 0; i < 10; ++i) {
+    c->semfs[i].count = -1;  // -1 indica semáforo no usado
+    c->semfs[i].TID = -1;    // -1 indica no pertenece a ningún thread
+    INIT_LIST_HEAD(&c->semfs[i].blocked);
+  }
 
   init_stats(&c->p_stats);
 
