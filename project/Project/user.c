@@ -35,6 +35,9 @@ main(void) {
   sem_id = semCreate(1);
   int sem_wait_id = semWait(sem_id);
   int sem_post_id = semPost(sem_id);
+  semDestroy(sem_id);
+
+  sem_id = semCreate(1);
   if (sem_id < 0) {
     write(1, "Error creating semaphore\n", 25);
     exit();
