@@ -90,6 +90,14 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
   }
   
   if (what == 0) {
+
+    // Inicializar los semáforos del nuevo proceso
+    for (int i = 0; i < 10; ++i) {
+      uchild->task.semfs[i].count = -1;
+      uchild->task.semfs[i].TID = -1;
+      INIT_LIST_HEAD(&uchild->task.semfs[i].blocked);
+    }
+
 	  /* new pages dir */
 	  allocate_DIR((struct task_struct*)uchild);
 	  
@@ -470,4 +478,133 @@ void* sys_StartScreen(void)
 	set_ss_pag(pt, logic_page, frame);
 	current()->screen_buffer = (void *) (logic_page << 12);
 	return current()->screen_buffer;
+}
+
+int sys_semCreate(int value) {
+
+  struct task_struct *master = current()->master;
+  int i;
+  
+  if (value < 0) {
+    return -EINVAL;  // Valor inicial inválido
+  }
+  
+  // En sys_semCreate
+  if (current()->master == NULL) {
+    printk("Error: master is NULL\n");
+    return -EINVAL;
+  }
+  // Buscar un slot libre
+  for (i = 0; i < 10; ++i) {
+    if (master->semfs[i].TID == -1) break;
+  }
+  if (i == 10) return -ENOMEM;  // No hay slots libres
+  
+  // Inicializar el semáforo
+  master->semfs[i].count = value;
+  INIT_LIST_HEAD(&master->semfs[i].blocked);
+  master->semfs[i].TID = current()->TID;
+
+  return i;  // Devolver el identificador del semáforo
+}
+
+int sys_semWait(int semid) {
+  printk("A");
+  struct task_struct *master = current()->master;
+  
+  // Verificar si el semáforo existe
+  if (semid < 0 || semid > 9 || master->semfs[semid].TID == -1) 
+    return -EAGAIN;
+  printk("B");
+  // Decrementar contador
+  master->semfs[semid].count -= 1;
+  
+  // Si contador es negativo, bloqueamos el thread
+  if (master->semfs[semid].count < 0) {
+    printk("C");
+    current()->state = ST_BLOCKED;
+    list_add_tail(&current()->list, &master->semfs[semid].blocked);
+    sched_next_rr();  // Ceder CPU a otro thread
+  }
+  printk("D");
+  return 0;
+}
+
+int sys_semPost(int semid) {
+  struct task_struct *master = current()->master;
+  struct task_struct *best_thread = NULL;
+  struct list_head *lhcurrent = NULL;
+  
+  // Verificación de parámetros
+  if (semid < 0 || semid >= 10) return -EINVAL;
+  if (!master || master->semfs[semid].TID == -1) return -EAGAIN;
+  
+  // Incrementar contador
+  master->semfs[semid].count++;
+  
+  // Si hay threads bloqueados (contador era <= 0 antes del incremento)
+  if (master->semfs[semid].count <= 0) {
+    // Verificar si hay threads en la cola de bloqueados
+    if (list_empty(&master->semfs[semid].blocked)) return 0;
+    
+    // Desbloquear el thread con mayor prioridad
+    struct list_head *l;
+    int highest_prio = -1;
+    
+    list_for_each(l, &master->semfs[semid].blocked) {
+      struct task_struct *t = list_head_to_task_struct(l);
+      if (t->priority > highest_prio) {
+        highest_prio = t->priority;
+        best_thread = t;
+        lhcurrent = l;
+      }
+    }
+    
+    // Si no encontramos ningún thread 
+    if (!best_thread) {
+      lhcurrent = list_first(&master->semfs[semid].blocked);
+      best_thread = list_head_to_task_struct(lhcurrent);
+    }
+    
+    // Eliminar el thread de la cola de bloqueados
+    list_del(lhcurrent);
+    
+    // Añadir a la cola de listos y cambiar su estado
+    best_thread->state = ST_READY;
+    list_add_tail(&best_thread->list, &readyqueue);
+    
+    // Apropiación inmediata si el thread tiene mayor prioridad
+    if (best_thread->priority > current()->priority) {
+      // Mover el thread actual a la cola de ready
+      update_process_state_rr(current(), &readyqueue);
+      // Ejecutar el planificador para cambiar al thread de mayor prioridad
+      sched_next_rr();
+    }
+  }
+  
+  return 0;
+}
+
+int sys_semDestroy(int semid) {
+  struct task_struct *master = current()->master;
+  
+  // Verificar si el semáforo existe y si el thread actual es su creador
+  if (semid < 0 || semid > 9 || master->semfs[semid].TID != current()->TID) 
+    return -EAGAIN;
+  
+  // Despertar todos los threads bloqueados
+  while (!list_empty(&master->semfs[semid].blocked)) {
+    struct list_head *lhcurrent = list_first(&master->semfs[semid].blocked);
+    list_del(lhcurrent);
+    struct task_struct* tu = list_head_to_task_struct(lhcurrent);
+    
+    tu->state = ST_READY;
+    list_add_tail(&tu->list, &readyqueue);
+  }
+  
+  // Marcar el semáforo como libre
+  master->semfs[semid].count = -1;
+  master->semfs[semid].TID = -1;
+  
+  return 0;
 }

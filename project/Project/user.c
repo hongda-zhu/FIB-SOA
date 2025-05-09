@@ -1,11 +1,9 @@
 #include <libc.h>
 
-char buff[24];
-
-int pid;
-char* screen_buffer;
-
-int mobex;
+// Variable compartida
+int shared_var = 0;
+int sem_id;
+int mobex = 1;
 
 void test(void* par) {
 	SetPriority(2);
@@ -18,53 +16,57 @@ void test(void* par) {
 	}
 }
 
-void draw_char(int x, int y, char c, char color) {
-	x %= 80;
-	y %= 25;
-    int pos = (y * 80 + x) * 2;
-    screen_buffer[pos] = c;
-    screen_buffer[pos + 1] = color;
+void test2(void* par) {
+  int i;
+  for (i = 0; i < 1000; i++) {
+    semWait(sem_id);
+    // Sección crítica
+    shared_var++;
+    write(1, ".", 1);
+    semPost(sem_id);
+  }
+  // Salir del thread
+  exit();
 }
 
 int __attribute__ ((__section__(".text.main")))
-  main(void)
-{
-	mobex = 0;
-	write(1, "USR CODE\n", 9);
-    /* Next line, tries to move value 0 to CR3 register. This register is a privileged one, and so it will raise an exception */
-     /* __asm__ __volatile__ ("mov %0, %%cr3"::"r" (0) ); */
-	char keyboard_state[256];
-	screen_buffer = (char*)StartScreen();
-	
-	if (pthread_create(test, (void*)0, 4096) != 0) {
-		write(1, "CREATED_THREAD", 14);
-		while(1) {
-			if (mobex == 0) {
-				write(1, "sus", 3);
-				mobex = 1;
-			}
-			else write(1, ".", 1);
-		}
-	}
-	
-	if (fork() != 0) {
-		write(1, "fork", 4);
-		exit();
-	}
-	write(1, "boomer", 6);
-	char buff[256];
-	itoa(screen_buffer, buff);
-	write(1, buff, strlen(buff));
-	int x = 0;
-  while(1) { 
-	  //write(1, "x", 1);
-	  //pause(1000);
-	  //GetKeyboardState(keyboard_state);
-	  //if (keyboard_state['c']) write(1, "c", 1);
-	  if (x > 0) draw_char(x-1, 10, ' ', 0x07);
+main(void) {
+  // Crear un semáforo con valor inicial 1 (mutex)
+  sem_id = semCreate(1);
+  int sem_wait_id = semWait(sem_id);
+  int sem_post_id = semPost(sem_id);
+  semDestroy(sem_id);
 
-		draw_char(x, 10, '*', 0x0E);
-
-		x++;
-	  }
+  sem_id = semCreate(1);
+  if (sem_id < 0) {
+    write(1, "Error creating semaphore\n", 25);
+    exit();
+  }
+  
+  // Crear 2 threads
+  if (pthread_create(test, (void*)0, 4096)) {
+    write(1, "Error creating thread 1\n", 24);
+    exit();
+  }
+  
+  if (pthread_create(test, (void*)0, 4096)) {
+    write(1, "Error creating thread 2\n", 24);
+    exit();
+  }
+  
+  // Esperar un tiempo para que los threads terminen
+  int i;
+  for (i = 0; i < 100000; i++);
+  
+  // Mostrar el valor final
+  char buffer[12];
+  write(1, "\nFinal value: ", 14);
+  itoa(shared_var, buffer);
+  write(1, buffer, strlen(buffer));
+  write(1, "\n", 1);
+  
+  // Destruir el semáforo
+  semDestroy(sem_id);
+  
+  while(1);
 }
