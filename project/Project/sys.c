@@ -505,7 +505,7 @@ int sys_semCreate(int value) {
   
   // En sys_semCreate
   if (current()->master == NULL) {
-    printk("Error: master is NULL\n");
+    //printk("Error: master is NULL\n");
     return -EINVAL;
   }
   // Buscar un slot libre
@@ -523,24 +523,23 @@ int sys_semCreate(int value) {
 }
 
 int sys_semWait(int semid) {
-  printk("A");
+  //printk("A");
   struct task_struct *master = current()->master;
   
   // Verificar si el semáforo existe
   if (semid < 0 || semid > 9 || master->semfs[semid].TID == -1) 
     return -EAGAIN;
-  printk("B");
+  //printk("B");
   // Decrementar contador
   master->semfs[semid].count -= 1;
   
   // Si contador es negativo, bloqueamos el thread
   if (master->semfs[semid].count < 0) {
-    printk("C");
-    current()->state = ST_BLOCKED;
-    list_add_tail(&current()->list, &master->semfs[semid].blocked);
+    //printk("C");
+    update_process_state_rr(current(), &blocked);
     sched_next_rr();  // Ceder CPU a otro thread
   }
-  printk("D");
+  //printk("D");
   return 0;
 }
 
@@ -584,8 +583,7 @@ int sys_semPost(int semid) {
     list_del(lhcurrent);
     
     // Añadir a la cola de listos y cambiar su estado
-    best_thread->state = ST_READY;
-    list_add_tail(&best_thread->list, &readyqueue);
+    update_process_state_rr(best_thread, &readyqueue);
     
     // Apropiación inmediata si el thread tiene mayor prioridad
     if (best_thread->priority > current()->priority) {
@@ -612,8 +610,7 @@ int sys_semDestroy(int semid) {
     list_del(lhcurrent);
     struct task_struct* tu = list_head_to_task_struct(lhcurrent);
     
-    tu->state = ST_READY;
-    list_add_tail(&tu->list, &readyqueue);
+    update_process_state_rr(tu, &readyqueue);
   }
   
   // Marcar el semáforo como libre

@@ -137,7 +137,7 @@ ENTRY(get_stats)
 	popl %ebp
 	ret
 
-/* int get_keyboard_state(char *keyboard) */
+/* int GetKeyboardState(char *keyboard) */
 ENTRY(GetKeyboardState)
 	pushl %ebp
 	movl %esp, %ebp
