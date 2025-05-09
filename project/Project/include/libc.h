@@ -28,6 +28,8 @@ int SetPriority(int priority);
 
 void exit();
 
+void pthread_exit();
+
 int yield();
 
 int get_stats(int pid, struct stats *st);

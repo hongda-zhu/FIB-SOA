@@ -104,6 +104,15 @@ ENTRY(exit)
 	popl %ebp
 	ret
 
+/* void pthread_exit() */
+ENTRY(pthread_exit)
+	pushl %ebp
+	movl %esp, %ebp
+	movl $8, %eax
+	call syscall_sysenter
+	popl %ebp
+	ret
+
 /* int yield() */
 ENTRY(yield)
 	pushl %ebp

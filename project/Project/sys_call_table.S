@@ -10,7 +10,7 @@ ENTRY (sys_call_table)
 	.long sys_pause	//5
 	.long sys_StartScreen	//6
 	.long sys_clone	//7
-	.long sys_ni_syscall	//8
+	.long sys_pthread_exit	//8
 	.long sys_ni_syscall	//9
 	.long sys_gettime	//10
 	.long sys_ni_syscall	//11
