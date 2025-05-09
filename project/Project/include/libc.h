@@ -38,5 +38,14 @@ int get_keyboard_state(char* keyboard);
 
 int pause(int milliseconds);
 
+int semCreate(int value);
+
+int semWait(int semid);
+
+int semPost(int semid);
+
+int semDestroy(int semid);
+
 void* StartScreen(void);
 #endif  /* __LIBC_H__ */
+

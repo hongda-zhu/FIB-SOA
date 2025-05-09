@@ -187,3 +187,60 @@ ENTRY(StartScreen)
 	call syscall_sysenter
 	popl %ebp
 	ret
+
+
+/* int semCreate(int value) */
+ENTRY(semCreate)
+  pushl %ebp
+  movl %esp, %ebp
+  pushl %ebx
+  movl $23, %eax        // Número de syscall
+  movl 0x8(%ebp), %ebx  // value
+  call syscall_sysenter
+  popl %ebx
+  test %eax, %eax
+  js nok                // Si hay error
+  popl %ebp
+  ret
+
+/* int semWait(int semid) */
+ENTRY(semWait)
+  pushl %ebp
+  movl %esp, %ebp
+  pushl %ebx
+  movl $24, %eax        // Número de syscall
+  movl 0x8(%ebp), %ebx  // semid
+  call syscall_sysenter
+  popl %ebx
+  test %eax, %eax
+  js nok                // Si hay error
+  popl %ebp
+  ret
+
+/* int semPost(int semid) */
+ENTRY(semPost)
+  pushl %ebp
+  movl %esp, %ebp
+  pushl %ebx
+  movl $25, %eax        // Número de syscall
+  movl 0x8(%ebp), %ebx  // semid
+  call syscall_sysenter
+  popl %ebx
+  test %eax, %eax
+  js nok                // Si hay error
+  popl %ebp
+  ret
+
+/* int semDestroy(int semid) */
+ENTRY(semDestroy)
+  pushl %ebp
+  movl %esp, %ebp
+  pushl %ebx
+  movl $26, %eax        // Número de syscall
+  movl 0x8(%ebp), %ebx  // semid
+  call syscall_sysenter
+  popl %ebx
+  test %eax, %eax
+  js nok                // Si hay error
+  popl %ebp
+  ret
