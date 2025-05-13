@@ -129,6 +129,8 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 		set_ss_pag(process_PT, PAG_LOG_INIT_CODE+pag, get_frame(parent_PT, PAG_LOG_INIT_CODE+pag));
 	  }
 	  /* Copy parent's DATA to child. We will use TOTAL_PAGES-1 as a temp logical page to map to */
+	  set_cr3(get_DIR(current()));
+	  
 	  for (i=0; i<NUM_PAG_DATA; i++)
 	  {	
 		pag=NUM_PAG_KERNEL+NUM_PAG_CODE+i;
@@ -188,6 +190,8 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 				  free_frame(get_frame(parent_PT, pag));
 				  del_ss_pag(parent_PT, pag);
 			  }
+			  /* Deallocate task_struct */
+			  list_add_tail(lhcurrent, &freequeue);
 			  return -EAGAIN;
 		  }
 		  set_ss_pag(parent_PT, pag, new_ph_pag);
@@ -206,15 +210,15 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 	  uchild->stack[KERNEL_STACK_SIZE-2] = child_esp; //esp
 	  uchild->stack[KERNEL_STACK_SIZE-5] = func; //eip
   }
-  
-  /* Deny access to the child's memory space */
-  set_cr3(get_DIR(current()));
-  
+	
   /* Restore old logical pages after data section*/
   for (i=0; i<NUM_PAG_DATA; i++) {
 	  if (data_pages_copy[i] != -1)
 		set_ss_pag(parent_PT, NUM_PAG_KERNEL+NUM_PAG_CODE+NUM_PAG_DATA+i, data_pages_copy[i]);
   }
+  
+  /* Deny access to the child's memory space */
+  set_cr3(get_DIR(current()));
   
   uchild->task.TID=++global_TID;
   
@@ -331,59 +335,69 @@ void sys_exit()
   struct task_struct* master = current()->master;
   page_table_entry *process_PT = get_PT(current());
   
-  if (current() != master && master->num_threads > 1) {
-	  /*if (current() == master) {
-		  list_head* lh = list_first(master->threads);
-		  struct task_struct* new_master = list_head_to_task_struct(lh);
-		  new_master->master = &new_master;
-		  new_master->threads = master->threads;
-	  }*/
-	  
-	  for (i = current()->user_stack_page_start; i <= current()->user_stack_page_end; i++) {
-		  int frame = get_frame(process_PT, i);
-		  del_ss_pag(process_PT, i);
-		  free_frame(frame);
-	  }
-	  
-	  master->num_threads--;
-	  list_del(&current()->threads_list);
-  }
-  else {
-	  //if master thread, free other threads
-	  if (current() == master && master->num_threads > 1) {
-		  struct list_head *l, *l_next;
-		  list_for_each_safe(l, l_next, &master->threads) {
-			  struct task_struct *t = list_head_to_task_struct(l);
-			  for (i = t->user_stack_page_start; i <= t->user_stack_page_end; i++) {
-				  int frame = get_frame(process_PT, i);
-				  del_ss_pag(process_PT, i);
-				  free_frame(frame);
-			  }
-			  
-			  list_del(&t->threads_list);
-			  list_del(&t->list);
-			  t->TID = -1;
-			  t->PID = -1;
-			  list_add_tail(&t->list, &freequeue);
+  if (current() == master && master->num_threads > 1) {
+	  struct list_head *l, *l_next;
+	  list_for_each_safe(l, l_next, &master->threads) {
+		  struct task_struct *t = list_head_to_task_struct(l);
+		  for (i = t->user_stack_page_start; i <= t->user_stack_page_end; i++) {
+			  int frame = get_frame(process_PT, i);
+			  del_ss_pag(process_PT, i);
+			  free_frame(frame);
 		  }
-	  }
-	  
-	  // Deallocate all the propietary physical pages
-	  for (i=0; i<NUM_PAG_DATA; i++)
-	  {
-		free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
-		del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
-	  }
-	  
-	  if (current()->screen_buffer != NULL) {
-		  page_table_entry* pt = get_PT(current());
-		  int frame = get_frame(pt, (unsigned int)current()->screen_buffer >> 12);
-		  del_ss_pag(process_PT, ((int)current()->screen_buffer)>>12);
-		  current()->screen_buffer = NULL;
-		  free_frame(frame);
+		  
+		  list_del(&t->threads_list);
+		  list_del(&t->list);
+		  t->TID = -1;
+		  t->PID = -1;
+		  list_add_tail(&t->list, &freequeue);
 	  }
   }
 	  
+  // Deallocate all the propietary physical pages
+  for (i=0; i<NUM_PAG_DATA; i++)
+  {
+	free_frame(get_frame(process_PT, PAG_LOG_INIT_DATA+i));
+	del_ss_pag(process_PT, PAG_LOG_INIT_DATA+i);
+  }
+  
+  if (current()->screen_buffer != NULL) {
+	  page_table_entry* pt = get_PT(current());
+	  int frame = get_frame(pt, (unsigned int)current()->screen_buffer >> 12);
+	  del_ss_pag(process_PT, ((int)current()->screen_buffer)>>12);
+	  current()->screen_buffer = NULL;
+	  free_frame(frame);
+  }
+	  
+  /* Free task_struct */
+  list_add_tail(&(current()->list), &freequeue);
+  
+  current()->PID = -1;
+  current()->TID = -1,
+  
+  /* Restarts execution of the next process */
+  sched_next_rr();
+}
+
+void sys_pthread_exit()
+{
+  int i;
+  struct task_struct* master = current()->master;
+  page_table_entry *process_PT = get_PT(current());
+  
+  if (current() == master) {
+	  sys_exit();
+	  return;
+  }
+  
+  for (i = current()->user_stack_page_start; i <= current()->user_stack_page_end; i++) {
+	  int frame = get_frame(process_PT, i);
+	  del_ss_pag(process_PT, i);
+	  free_frame(frame);
+  }
+  
+  master->num_threads--;
+  list_del(&current()->threads_list);
+  
   /* Free task_struct */
   list_add_tail(&(current()->list), &freequeue);
   
