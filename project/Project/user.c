@@ -30,12 +30,28 @@ void print(char* s) {
     write(1, s, strlen(s));
 }
 
+void printc(char c) {
+	char* s = ".";
+	s[0] = c;
+	print(s);
+}
+
 // Imprime número de dos dígitos en consola (debug)
 void print_n(int num) {
     char* buffer = "00";
     buffer[1] = '0' + num%10;
     buffer[0] = '0' + num/10;
     print(buffer);
+}
+
+void debug_keyboard(char* k) {
+	print("KEYBOARD KEYS: ");
+	int i = 0;
+	for (i = 0; i < 255; ++i) {
+		if (k[i])
+			printc(i);
+	}
+	printc('\n');
 }
 
 // Estructura con el estado del juego
@@ -350,6 +366,7 @@ void* poll_keyboard(void* param) {
     while (1) {
         if (recent_keyboard == 1) {
             GetKeyboardState(keyboard2); // Lee teclado actual
+            /*debug_keyboard(keyboard2);
             // Debug: imprime teclas WASD presionadas
             if (keyboard2[(unsigned char)'w'] || keyboard2[(unsigned char)'a'] ||
                 keyboard2[(unsigned char)'s'] || keyboard2[(unsigned char)'d']) {
@@ -359,12 +376,13 @@ void* poll_keyboard(void* param) {
                 if (keyboard2[(unsigned char)'s']) print("s");
                 if (keyboard2[(unsigned char)'d']) print("d");
                 print("\n");
-            }
+            }*/
             updateSelectedDir(game, keyboard1, keyboard2); // Actualiza dirección si hubo cambio
             recent_keyboard = 2;
         }
         else { // Lo mismo pero usando keyboard1 como actual
             GetKeyboardState(keyboard1);
+            /*debug_keyboard(keyboard1);
             if (keyboard1[(unsigned char)'w'] || keyboard1[(unsigned char)'a'] ||
                 keyboard1[(unsigned char)'s'] || keyboard1[(unsigned char)'d']) {
                 print("Keys: ");
@@ -373,11 +391,11 @@ void* poll_keyboard(void* param) {
                 if (keyboard1[(unsigned char)'s']) print("s");
                 if (keyboard1[(unsigned char)'d']) print("d");
                 print("\n");
-            }
+            }*/
             updateSelectedDir(game, keyboard2, keyboard1);
             recent_keyboard = 1;
         }
-        pause(25); // Pausa para ceder CPU
+        pause(200); // Pausa para ceder CPU
     }
     return 0;
 }
@@ -461,7 +479,7 @@ if (dir_sem < 0) {
     while(1) {
         ++cnt;
         // Control de velocidad: mueve cada 100 ciclos de este bucle
-        if (cnt == 100) {
+        if (cnt == 1000) {
             do_move = 1;
             cnt = 0;
         }
@@ -483,3 +501,4 @@ if (dir_sem < 0) {
 
     return 0;
 }
+

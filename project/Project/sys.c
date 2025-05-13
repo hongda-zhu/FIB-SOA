@@ -444,12 +444,12 @@ int sys_get_stats(int pid, struct stats *st)
   return -ESRCH; /*ESRCH */
 }
 
-extern char* keyboard_state;
+char keyboard_state[256];
 int sys_GetKeyboardState(char* keyboard)
 {
 	int res;
-	if (!access_ok(VERIFY_WRITE, keyboard, 256)) return -EFAULT;
-	res = copy_to_user(&keyboard_state, keyboard, 256);
+	//if (!access_ok(VERIFY_WRITE, keyboard, 256)) return -EFAULT;
+	res = copy_to_user(keyboard_state, keyboard, 256);
 	if (res < 0) return -EFAULT;
 	return 0;
 }

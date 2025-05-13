@@ -31,7 +31,7 @@ char char_map[] =
   '\0','\0'
 };
 
-char keyboard_state[256];
+extern char keyboard_state[256];
 
 int zeos_ticks = 0;
 
@@ -66,7 +66,6 @@ void keyboard_routine()
   unsigned char c = inb(0x60);
   int make = (c & 0x80) == 0;
   int key = c&0x7F;
-  
   //if (make) printc_xy(0, 0, char_map[key]);
   keyboard_state[char_map[key]] = make;
 }
