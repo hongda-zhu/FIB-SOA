@@ -87,7 +87,6 @@ ENTRY(pthread_create)
 	movl 0xC(%ebp), %edx; //*param
 	movl 0x10(%ebp), %esi; //stack_size
 	call syscall_sysenter
-	call syscall_sysenter
 	popl %esi
 	popl %ebx
 	test %eax, %eax
