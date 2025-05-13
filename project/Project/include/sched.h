@@ -16,6 +16,12 @@
 
 enum state_t { ST_RUN, ST_READY, ST_BLOCKED };
 
+struct sem_t{
+  int count;
+  struct list_head blocked;
+  int TID;            
+};
+
 struct task_struct {
   int PID;			/* Process ID. This MUST be the first field of the struct. */
   page_table_entry * dir_pages_baseAddr;
@@ -36,6 +42,9 @@ struct task_struct {
   struct task_struct* master; 
   int num_threads;
   struct list_head threads; /* actual list when thread is master */
+
+  // 4
+  struct sem_t semfs[10]; // Max 10 sem for a process/thread
 };
 
 union task_union {
