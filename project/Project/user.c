@@ -101,16 +101,15 @@ void updateSelectedDir(struct sgs* game, char* old_keyboard, char* new_keyboard)
         // Comprueba si la tecla se acaba de pulsar
         if (new_keyboard[(unsigned char)keys_for_dirs[i]] && !old_keyboard[(unsigned char)keys_for_dirs[i]]) {
             semWait(dir_sem); // Protege acceso a next_dir/dir
-            char old_dir = game->next_dir;
+            //char old_dir = game->next_dir;
             game->next_dir = getNextDir(keys_for_dirs[i], game->dir);
-            if (old_dir != game->next_dir) {
-                print("Dir changed from "); print_n(old_dir); print(" to "); print_n(game->next_dir); print("\n");
-            }
+            //if (old_dir != game->next_dir) {
+            //    print("New dir changed from "); print_n(old_dir); print(" to "); print_n(game->next_dir); print("\n");
+            //}
             semPost(dir_sem);
         }
     }
 }
-
 /* --- Lógica del Juego --- */
 
 /* Mueve la serpiente 1 paso. Devuelve:
@@ -215,7 +214,7 @@ void spawnFruit(struct sgs* game) {
             if (game->grid[x][y] == 0) --randRes;
             if (randRes < 0) {
                 game->grid[x][y] = -2;
-                print("Spawned fruit at ("); print_n(x); print(","); print_n(y); print(")\n");
+                //print("Spawned fruit at ("); print_n(x); print(","); print_n(y); print(")\n");
                 return;
             }
         }
@@ -270,64 +269,63 @@ void debugGrid(struct sgs* game) {
 // Dibuja un bloque 3x3 para pared, fruta o vacío
 void drawSpecial(char* screen_buffer, int x, int y, int element_id, char color, char background_color) {
     int i, j;
-    // Limpia área 3x3
-    for (i = x*3; i < x*3+3; ++i) {
-        for (j = y*3; j < y*3+3; ++j) {
-            draw_char(screen_buffer, i, j, ' ', bg_color);
-        }
-    }
-    // Dibuja elemento
     if (element_id == -1) { // Pared
         for (i = x*3; i < x*3+3; ++i) {
             for (j = y*3; j < y*3+3; ++j) {
                 draw_char(screen_buffer, i, j, '#', wall_color);
             }
         }
-    } else if (element_id == -2) { // Fruta
-        draw_char(screen_buffer, x*3,   y*3+1, '*', fruit_color);
-        draw_char(screen_buffer, x*3+1, y*3,   '*', fruit_color);
-        draw_char(screen_buffer, x*3+1, y*3+1, 'O', fruit_color);
-        draw_char(screen_buffer, x*3+1, y*3+2, '*', fruit_color);
-        draw_char(screen_buffer, x*3+2, y*3+1, '*', fruit_color);
-    }
+    } 
+    else {    
+		// Limpia área 3x3
+		for (i = x*3; i < x*3+3; ++i) {
+			for (j = y*3; j < y*3+3; ++j) {
+				draw_char(screen_buffer, i, j, ' ', bg_color);
+			}
+		}
+		
+		if (element_id == -2) { // Fruta
+			draw_char(screen_buffer, x*3+1, y*3+1, 'O', fruit_color);
+		}
+	}
 }
 
-// Dibuja un bloque 3x3 para la cabeza o cuerpo de la serpiente
-void drawSnake(char* screen_buffer, int x, int y, int value, int length) {
-    int i, j;
-    char symbol;
-    int color;
-    // Limpia área 3x3
-    for (i = x*3; i < x*3+3; ++i) {
-        for (j = y*3; j < y*3+3; ++j) {
-            draw_char(screen_buffer, i, j, ' ', bg_color);
-        }
-    }
-    // Elige símbolo y color
-    if (value == 1) { symbol = '@'; color = head_color; } // Cabeza
-    else { symbol = 'O'; color = sprite_color; } // Cuerpo
-    // Dibuja cruz 3x3
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++) {
-            if (i == 1 || j == 1) {
-                draw_char(screen_buffer, x*3+i, y*3+j, symbol, color);
-            }
-        }
-    }
+void drawBody(void* screen_buffer, int x, int y, int prev, int next, char color, char background_color) {
+	int i, j;
+	//draw emptyness
+	for (i = x*3; i < x*3+3; ++i) {
+		for (j = y*3; j < y*3+3; ++j) {
+			draw_char(screen_buffer, i, j, ' ', background_color);
+		}
+	}
+	draw_char(screen_buffer, x*3+1, y*3+1, 'X', color);
+	draw_char(screen_buffer, x*3+1 + x_dirs[prev], y*3+1 + y_dirs[prev], 'X', color);
+	draw_char(screen_buffer, x*3+1 + x_dirs[next], y*3+1 + y_dirs[next], 'X', color);
 }
 
-// Dibuja el estado completo del juego recorriendo el grid
-void drawGame(int grid[X_size][Y_size], char* screen_buffer, struct sgs* game) {
-    int x, y;
-    drawStats(screen_buffer, game); // Dibuja estadísticas
-    // Recorre el grid y dibuja cada celda
-    for (x = 0; x < X_size; ++x) {
-        for (y = 0; y < Y_size; ++y) {
-            int value = grid[x][y];
-            if (value <= 0) drawSpecial(screen_buffer, x, y, value, sprite_color, bg_color); // Pared, vacío, fruta
-            else drawSnake(screen_buffer, x, y, value, game->length); // Serpiente
-        }
-    }
+void drawGame(int grid[X_size][Y_size], void* screen_buffer, struct sgs* game) {
+	int x, y, xx, yy, i;
+	char next, prev;
+	drawStats(screen_buffer, game); // Dibuja estadísticas
+	for (x = 0; x < X_size; ++x) {
+		for (y = 0; y < Y_size; ++y) {
+			if (grid[x][y] <= 0) { //not snake
+				drawSpecial(screen_buffer, x, y, grid[x][y], sprite_color, bg_color);
+			}
+			else { //snake body
+				prev = 4;
+				next = 4;
+				for (i = 0; i < 4; ++i) {
+					xx = x + x_dirs[i];
+					yy = y + y_dirs[i];
+					if (!isValidPos(xx, yy)) continue;
+					if (grid[xx][yy] == grid[x][y] + 1) next = i;
+					else if (grid[x][y] != 1 && grid[xx][yy] == grid[x][y] - 1) prev = i; // != 1 is exception for head
+				}
+				drawBody(screen_buffer, x, y, prev, next, sprite_color, bg_color);
+			}
+		}
+	}
 }
 
 /* --- Funciones de Actualización y Threads --- */
@@ -336,14 +334,14 @@ void drawGame(int grid[X_size][Y_size], char* screen_buffer, struct sgs* game) {
 int update(struct sgs* game, char* screen_buffer, int do_movement) {
     int res = 0;
     if (do_movement) {
-        print("m("); print_n(game->head_x); print(","); print_n(game->head_y); print(")\n");
+        //print("m("); print_n(game->head_x); print(","); print_n(game->head_y); print(")\n");
         res = move(game);
         // Debug grid ocasional
-        if (game->moves % 5 == 0) debugGrid(game);
+        //if (game->moves % 5 == 0) debugGrid(game);
         if (res == -1) return -1; // Game Over
         if (res == 1) { // Comió fruta
             spawnFruit(game);
-            print("Ate fruit! Score: "); print_n(game->fruits_eaten); print("\n");
+            //print("Ate fruit! Score: "); print_n(game->fruits_eaten); print("\n");
         }
     }
     drawGame(game->grid, screen_buffer, game); // Dibuja siempre
@@ -364,38 +362,18 @@ void* poll_keyboard(void* param) {
 
     print("thread set up. entering thread loop\n");
     while (1) {
+		//print("K");
         if (recent_keyboard == 1) {
             GetKeyboardState(keyboard2); // Lee teclado actual
-            /*debug_keyboard(keyboard2);
-            // Debug: imprime teclas WASD presionadas
-            if (keyboard2[(unsigned char)'w'] || keyboard2[(unsigned char)'a'] ||
-                keyboard2[(unsigned char)'s'] || keyboard2[(unsigned char)'d']) {
-                print("Keys: ");
-                if (keyboard2[(unsigned char)'w']) print("w");
-                if (keyboard2[(unsigned char)'a']) print("a");
-                if (keyboard2[(unsigned char)'s']) print("s");
-                if (keyboard2[(unsigned char)'d']) print("d");
-                print("\n");
-            }*/
             updateSelectedDir(game, keyboard1, keyboard2); // Actualiza dirección si hubo cambio
             recent_keyboard = 2;
         }
         else { // Lo mismo pero usando keyboard1 como actual
             GetKeyboardState(keyboard1);
-            /*debug_keyboard(keyboard1);
-            if (keyboard1[(unsigned char)'w'] || keyboard1[(unsigned char)'a'] ||
-                keyboard1[(unsigned char)'s'] || keyboard1[(unsigned char)'d']) {
-                print("Keys: ");
-                if (keyboard1[(unsigned char)'w']) print("w");
-                if (keyboard1[(unsigned char)'a']) print("a");
-                if (keyboard1[(unsigned char)'s']) print("s");
-                if (keyboard1[(unsigned char)'d']) print("d");
-                print("\n");
-            }*/
             updateSelectedDir(game, keyboard2, keyboard1);
             recent_keyboard = 1;
         }
-        pause(200); // Pausa para ceder CPU
+        pause(300); // Pausa para ceder CPU
     }
     return 0;
 }
@@ -436,14 +414,14 @@ main(void)
     game.alive = 1;
 
     // Inicializa semáforo
-dir_sem = semCreate(1);
-print("Semaphore created with ID: ");
-print_n(dir_sem);
-print("\n");
-if (dir_sem < 0) {
-    print("Error creating semaphore\n");
-    exit();
-}
+	dir_sem = semCreate(1);
+	print("Semaphore created with ID: ");
+	print_n(dir_sem);
+	print("\n");
+	if (dir_sem < 0) {
+		print("Error creating semaphore\n");
+		exit();
+	}
 
     // Imprime grid inicial (debug)
     debugGrid(&game);
@@ -484,7 +462,8 @@ if (dir_sem < 0) {
             cnt = 0;
         }
         else do_move = 0;
-
+        //print("u");
+        //if (do_move) print("M");
         // Actualiza estado y dibuja. Si devuelve -1, termina.
         if (update(&game, screen_buffer, do_move) == -1) {
             print("\n-----------------------\n");

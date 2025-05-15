@@ -229,6 +229,7 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
   set_cr3(get_DIR(current()));
   
   uchild->task.TID=++global_TID;
+  //print_number(uchild->task.TID); printk("\n");
   
   int register_ebp;		/* frame pointer */
   /* Map Parent's ebp to child's stack */
@@ -257,7 +258,6 @@ int sys_clone(int what, void *(*func)(void*), void *param, int stack_size)
 	  current()->num_threads++;
 	  list_add_tail(&uchild->task.threads_list, &current()->threads);
   }
-  uchild->task.state=ST_READY;
   
   /* Set stats to 0 */
   init_stats(&(uchild->task.p_stats));
@@ -465,6 +465,7 @@ int sys_pause(int milliseconds)
 	
 	current()->unpause_tick = get_ticks() + ticks;
 	update_process_state_rr(current(), &blocked);
+	
 	sched_next_rr();
 	return 0;
 }

@@ -105,32 +105,41 @@ int needs_sched_rr(void)
 	struct list_head *e;
 	struct task_struct *t;
 	int has_higher_prio = 0;
+	int has_same_prio = 0;
 	if (!list_empty(&readyqueue)) {
 		list_for_each(e, &readyqueue) {
 			t = list_head_to_task_struct(e);
-			if (t->priority >= current()->priority) {
+			if (t->priority > current()->priority) {
 				has_higher_prio = 1;
 				break;
 			}
+			if (t->priority == current()->priority) {
+				has_same_prio = 1;
+			}
 		}
 	}
-  if ((remaining_quantum==0) && has_higher_prio) return 1;
+
+  if (has_higher_prio) return 1;
+  if ((remaining_quantum==0) && has_same_prio) return 1;
+  
   if (remaining_quantum==0) remaining_quantum=get_quantum(current());
   return 0;
 }
 
 void update_process_state_rr(struct task_struct *t, struct list_head *dst_queue)
 {
-  if (t->state != ST_RUN) list_del(&(t->list));
+  if (t->state != ST_RUN && t != idle_task) list_del(&(t->list));
   if (dst_queue != NULL)
   {
     list_add_tail(&(t->list), dst_queue);
-    if (dst_queue != &readyqueue) t->state=ST_BLOCKED;
+    if (dst_queue != &readyqueue) {
+		t->state=ST_BLOCKED;
+	}
     else
     {
       update_stats(&(t->p_stats.system_ticks), &(t->p_stats.elapsed_total_ticks));
       t->state = ST_READY;
-      if (t->priority > current()->priority && t != current()) sched_next_rr();
+      //if (t->priority > current()->priority && t != current()) sched_next_rr();
     }
   }
   else t->state=ST_RUN;
@@ -151,24 +160,23 @@ void sched_next_rr(void)
 		}
 	}
 	
-	if (best_task) {
-		list_del(&best_task->list);
-	}
-	else {
+	if (!best_task) {
 		e = list_first(&readyqueue);
 		best_task = list_head_to_task_struct(e);
-		list_del(e);
 	}
+	
+	
   }
   else
     best_task = idle_task;
     
-  best_task->state = ST_RUN;
+  update_process_state_rr(best_task, NULL);
+  //best_task->state = ST_RUN;
   remaining_quantum = get_quantum(best_task);
 
-  update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
-  update_stats(&(best_task->p_stats.ready_ticks), &(best_task->p_stats.elapsed_total_ticks));
-  best_task->p_stats.total_trans++;
+  //update_stats(&(current()->p_stats.system_ticks), &(current()->p_stats.elapsed_total_ticks));
+  //update_stats(&(best_task->p_stats.ready_ticks), &(best_task->p_stats.elapsed_total_ticks));
+  //best_task->p_stats.total_trans++;
 
   task_switch((union task_union*)best_task);
 }
@@ -221,7 +229,8 @@ void init_task1(void)
   
   INIT_LIST_HEAD(&c->threads);
 
-  c->PID=1;
+  c->PID=3;
+  c->TID=30;
 
   c->total_quantum=DEFAULT_QUANTUM;
 
