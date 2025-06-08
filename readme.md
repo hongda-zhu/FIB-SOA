@@ -12,18 +12,6 @@
 | **[Hongda Zhu](https://github.com/hongda-zhu)** | 8.0                     |
 
 
-## 🎯 Descripción del Proyecto
-
-Este proyecto consiste en la **creación de un sistema operativo funcional** que incluye:
-
-- ✅ Mecanismos de entrada al sistema
-- ✅ Gestión básica de procesos
-- ✅ Características adicionales
-- ✅ Hilos y sincronización
-- ✅ Gestión de E/S y memoria dinámica
-
----
-
 ## 📁 Estructura del Repositorio
 
 ### `/lab/` - Código para Lab 1 / Lab 2
