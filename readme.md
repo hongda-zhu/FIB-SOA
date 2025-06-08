@@ -6,10 +6,10 @@
 
 ## 👥 Equipo de Desarrollo
 
-| Estudiante | Calificación SOA |
-|------------|------------------|
-| **Pau Martí Biosca** | Matrícula de Honor (MH) |
-| **Hongda Zhu** | 8.0 |
+| Estudiante                                       | Calificación SOA        |
+| ------------------------------------------------ | ----------------------- |
+| **[Pau Martí Biosca](https://github.com/PauHPMCBR)** | Matrícula de Honor (MH) |
+| **[Hongda Zhu](https://github.com/hongda-zhu)** | 8.0                     |
 
 
 ## 🎯 Descripción del Proyecto
